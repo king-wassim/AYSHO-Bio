@@ -40,14 +40,14 @@ export default function CartDrawer({ onCheckout }: CartDrawerProps) {
 
       {/* Drawer */}
       <aside
-        className={`fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-sand-50 shadow-2xl transition-transform duration-300 ${
+        className={`fixed right-0 top-0 z-50 flex size-full max-w-md flex-col bg-sand-50 shadow-2xl transition-transform duration-300 ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         aria-hidden={!isOpen}
       >
         <div className="flex items-center justify-between border-b border-sand-200 bg-white px-5 py-4">
           <div className="flex items-center gap-2">
-            <CartIcon className="h-5 w-5 text-brand-700" />
+            <CartIcon className="size-5 text-brand-700" />
             <h2 className="font-display text-lg font-bold text-brand-900">
               Mon panier
             </h2>
@@ -59,17 +59,17 @@ export default function CartDrawer({ onCheckout }: CartDrawerProps) {
           </div>
           <button
             onClick={closeCart}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-sand-100"
+            className="flex size-9 items-center justify-center rounded-lg text-slate-500 hover:bg-sand-100"
             aria-label="Fermer"
           >
-            <CloseIcon className="h-5 w-5" />
+            <CloseIcon className="size-5" />
           </button>
         </div>
 
         {items.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-brand-50">
-              <CartIcon className="h-9 w-9 text-brand-300" />
+            <div className="flex size-20 items-center justify-center rounded-full bg-brand-50">
+              <CartIcon className="size-9 text-brand-300" />
             </div>
             <p className="mt-4 font-display text-lg font-semibold text-slate-700">
               Votre panier est vide
@@ -86,7 +86,7 @@ export default function CartDrawer({ onCheckout }: CartDrawerProps) {
           </div>
         ) : (
           <>
-            <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+            <div className="flex-1 space-y-3 overflow-y-auto p-4">
               {items.map(({ product, quantity }) => (
                 <div
                   key={product.id}
@@ -95,7 +95,7 @@ export default function CartDrawer({ onCheckout }: CartDrawerProps) {
                   <img
                     src={product.image}
                     alt={product.name}
-                    className="h-20 w-20 flex-shrink-0 rounded-lg object-cover"
+                    className="size-20 shrink-0 rounded-lg object-cover"
                   />
                   <div className="flex flex-1 flex-col">
                     <div className="flex items-start justify-between gap-2">
@@ -113,7 +113,7 @@ export default function CartDrawer({ onCheckout }: CartDrawerProps) {
                         className="text-slate-400 transition hover:text-red-500"
                         aria-label="Retirer"
                       >
-                        <TrashIcon className="h-4 w-4" />
+                        <TrashIcon className="size-4" />
                       </button>
                     </div>
 
@@ -121,20 +121,20 @@ export default function CartDrawer({ onCheckout }: CartDrawerProps) {
                       <div className="flex items-center gap-1 rounded-lg border border-sand-200">
                         <button
                           onClick={() => updateQuantity(product.id, quantity - 1)}
-                          className="flex h-7 w-7 items-center justify-center text-slate-600 hover:bg-sand-50"
+                          className="flex size-7 items-center justify-center text-slate-600 hover:bg-sand-50"
                           aria-label="Diminuer"
                         >
-                          <MinusIcon className="h-3.5 w-3.5" />
+                          <MinusIcon className="size-3.5" />
                         </button>
                         <span className="w-6 text-center text-sm font-semibold">
                           {quantity}
                         </span>
                         <button
                           onClick={() => updateQuantity(product.id, quantity + 1)}
-                          className="flex h-7 w-7 items-center justify-center text-slate-600 hover:bg-sand-50"
+                          className="flex size-7 items-center justify-center text-slate-600 hover:bg-sand-50"
                           aria-label="Augmenter"
                         >
-                          <PlusIcon className="h-3.5 w-3.5" />
+                          <PlusIcon className="size-3.5" />
                         </button>
                       </div>
                       <span className="font-display text-sm font-bold text-brand-800">
@@ -154,7 +154,7 @@ export default function CartDrawer({ onCheckout }: CartDrawerProps) {
                 </div>
                 <div className="flex justify-between text-slate-600">
                   <span className="flex items-center gap-1.5">
-                    <TruckIcon className="h-4 w-4" /> Livraison
+                    <TruckIcon className="size-4" /> Livraison
                   </span>
                   <span className="font-medium text-emerald-600">Gratuite</span>
                 </div>
@@ -165,7 +165,7 @@ export default function CartDrawer({ onCheckout }: CartDrawerProps) {
               </div>
 
               <div className="mt-3 flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-2 text-xs font-medium text-brand-800">
-                <BanknoteIcon className="h-4 w-4" />
+                <BanknoteIcon className="size-4" />
                 Paiement à la livraison (espèces)
               </div>
 

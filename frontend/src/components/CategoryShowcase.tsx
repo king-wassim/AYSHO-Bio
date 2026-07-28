@@ -31,12 +31,12 @@ export default function CategoryShowcase({ onSelect }: CategoryShowcaseProps) {
               <img
                 src={cat.image}
                 alt={cat.name}
-                className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                className="size-full object-cover transition duration-500 group-hover:scale-105"
                 loading="lazy"
               />
             </div>
             <div className="absolute inset-0 bg-gradient-to-t from-brand-900/85 via-brand-900/20 to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
+            <div className="absolute inset-x-0 bottom-0 p-5 text-white">
               <p className="text-xs font-medium uppercase tracking-wider text-brand-100">
                 {cat.tagline}
               </p>
@@ -46,7 +46,7 @@ export default function CategoryShowcase({ onSelect }: CategoryShowcaseProps) {
               </p>
               <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-white">
                 Explorer
-                <ChevronRightIcon className="h-4 w-4 transition group-hover:translate-x-1" />
+                <ChevronRightIcon className="size-4 transition group-hover:translate-x-1" />
               </span>
             </div>
           </button>

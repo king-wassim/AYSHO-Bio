@@ -6,7 +6,7 @@ import {
   useMemo,
   type ReactNode,
 } from 'react'
-import { products, type Product } from '../data/catalog'
+import type { Product } from '../data/catalog'
 
 export interface CartItem {
   product: Product
@@ -15,7 +15,7 @@ export interface CartItem {
 
 interface CartContextValue {
   items: CartItem[]
-  addItem: (productId: string, quantity?: number) => void
+  addItem: (product: Product, quantity?: number) => void
   removeItem: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
   clear: () => void
@@ -32,27 +32,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
   const [isOpen, setIsOpen] = useState(false)
 
-  const addItem = useCallback((productId: string, quantity = 1) => {
-    console.log('[CartContext] addItem called with:', productId, quantity)
-    console.log('[CartContext] available products:', products.map(p => p.id))
+  const addItem = useCallback((product: Product, quantity = 1) => {
     setItems((prev) => {
-      console.log('[CartContext] current items:', prev.map(i => ({ id: i.product.id, qty: i.quantity })))
-      const existing = prev.find((i) => i.product.id === productId)
+      const existing = prev.find((i) => i.product.id === product.id)
       if (existing) {
-        console.log('[CartContext] product exists, incrementing quantity')
         return prev.map((i) =>
-          i.product.id === productId
+          i.product.id === product.id
             ? { ...i, quantity: i.quantity + quantity }
             : i,
         )
       }
-      const product = products.find((p) => p.id === productId)
-      console.log('[CartContext] found product:', product)
-      if (!product) {
-        console.error('[CartContext] Product not found:', productId)
-        return prev
-      }
-      console.log('[CartContext] adding new product to cart')
       return [...prev, { product, quantity }]
     })
     setIsOpen(true)

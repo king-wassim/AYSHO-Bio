@@ -7,11 +7,11 @@ const config: Core.Config.Middlewares = [
   {
     name: 'strapi::cors',
     config: {
-      enabled: true,
       origin: process.env.FRONTEND_URL || 'http://localhost:5173',
       headers: ['*'],
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'],
       keepHeaderOnError: true,
+      credentials: true,
     },
   },
   'strapi::poweredBy',
@@ -20,6 +20,9 @@ const config: Core.Config.Middlewares = [
   'strapi::session',
   'strapi::favicon',
   'strapi::public',
+  'global::compression',
+  'global::securityHeaders',
+  //'global::rateLimit',
 ];
 
 export default config;

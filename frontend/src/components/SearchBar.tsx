@@ -47,7 +47,7 @@ export default function SearchBar({ fullWidth = false }: SearchBarProps) {
   }, [])
 
   const handleAdd = (product: Product) => {
-    addItem(product.id)
+    addItem(product)
     setQuery('')
     setIsOpen(false)
   }
@@ -59,7 +59,7 @@ export default function SearchBar({ fullWidth = false }: SearchBarProps) {
     >
       <div className="relative flex items-center">
         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-          <SearchIcon className="h-4 w-4 text-slate-400" />
+          <SearchIcon className="size-4 text-slate-400" />
         </div>
         <input
           type="text"
@@ -80,7 +80,7 @@ export default function SearchBar({ fullWidth = false }: SearchBarProps) {
       </div>
 
       {isOpen && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-80 overflow-y-auto rounded-xl border border-sand-200 bg-white shadow-card">
+        <div className="absolute inset-x-0 top-full z-50 mt-2 max-h-80 overflow-y-auto rounded-xl border border-sand-200 bg-white shadow-card">
           {results.length === 0 ? (
             <div className="p-4 text-center text-sm text-slate-500">
               Aucun résultat pour «&nbsp;{query}&nbsp;»
@@ -92,7 +92,7 @@ export default function SearchBar({ fullWidth = false }: SearchBarProps) {
                   <img
                     src={product.image}
                     alt={product.name}
-                    className="h-12 w-12 flex-shrink-0 rounded-lg object-cover bg-sand-100"
+                    className="size-12 shrink-0 rounded-lg bg-sand-100 object-cover"
                   />
                   <div className="flex-1 overflow-hidden">
                     <p className="truncate text-[10px] font-medium uppercase tracking-wide text-sand-500">
@@ -107,10 +107,10 @@ export default function SearchBar({ fullWidth = false }: SearchBarProps) {
                   </div>
                   <button
                     onClick={() => handleAdd(product)}
-                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-700 transition hover:bg-brand-700 hover:text-white"
+                    className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-700 transition hover:bg-brand-700 hover:text-white"
                     aria-label={`Ajouter ${product.name}`}
                   >
-                    <CartIcon className="h-4 w-4" />
+                    <CartIcon className="size-4" />
                   </button>
                 </li>
               ))}

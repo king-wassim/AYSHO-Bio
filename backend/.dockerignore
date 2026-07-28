@@ -1,0 +1,26 @@
+# Backend .dockerignore
+node_modules
+dist
+build
+.git
+.gitignore
+README.md
+*.log
+.DS_Store
+.env
+.env.local
+.env.*.local
+*.md
+Dockerfile
+docker-compose*.yml
+*.sh
+.vscode
+.idea
+coverage
+.nyc_output
+.strapi
+.tmp
+public/uploads
+*.db
+*.sqlite
+*.sqlite3

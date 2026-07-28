@@ -12,24 +12,46 @@
     "start": "strapi start",
     "strapi": "strapi",
     "upgrade": "npx @strapi/upgrade latest",
-    "upgrade:dry": "npx @strapi/upgrade latest --dry"
+    "upgrade:dry": "npx @strapi/upgrade latest --dry",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.{ts,json,md}\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "strapi db:generate",
+    "db:push": "strapi db:push",
+    "db:migrate": "strapi db:migrate",
+    "db:seed": "strapi db:seed",
+    "seed:example": "node scripts/seed-example.js"
   },
   "dependencies": {
     "@strapi/database": "5.51.0",
     "@strapi/plugin-cloud": "5.51.0",
     "@strapi/plugin-users-permissions": "5.51.0",
+    "@strapi/provider-upload-cloudinary": "^5.51.0",
     "@strapi/strapi": "5.51.0",
     "better-sqlite3": "12.8.0",
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0",
-    "react-router-dom": "^6.30.3",
-    "styled-components": "^6.0.0"
+    "pg": "^8.11.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.22.0",
+    "styled-components": "^6.1.8"
   },
   "devDependencies": {
+    "@types/koa": "^3.0.3",
     "@types/node": "^20",
+    "@types/pg": "^8.10.0",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "typescript": "^5"
+    "@typescript-eslint/eslint-plugin": "^8.65.0",
+    "@typescript-eslint/parser": "^8.65.0",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.6",
+    "eslint-plugin-vitest": "^0.5.4",
+    "prettier": "^3.2.5",
+    "typescript": "^5",
+    "vitest": "^1.2.0"
   },
   "engines": {
     "node": ">=20.0.0 <=26.x.x",

@@ -22,19 +22,19 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation()
-    addItem(product.id)
+    addItem(product)
   }
 
   return (
     <article
       onClick={onClick}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-soft transition hover:-translate-y-1 hover:shadow-card cursor-pointer"
+      className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-soft transition hover:-translate-y-1 hover:shadow-card"
     >
       <div className="relative aspect-square overflow-hidden bg-sand-50">
         <img
           src={product.image}
           alt={product.name}
-          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+          className="size-full object-cover transition duration-500 group-hover:scale-105"
           loading="lazy"
         />
         {product.badges && product.badges.length > 0 && (
@@ -70,7 +70,7 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
         </p>
 
         <div className="mt-2 flex items-center gap-1.5">
-          <StarIcon className="h-3.5 w-3.5 text-amber-400" />
+          <StarIcon className="size-3.5 text-amber-400" />
           <span className="text-xs font-semibold text-slate-700">
             {product.rating.toFixed(1)}
           </span>
@@ -93,10 +93,10 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
 
           <button
             onClick={handleAddToCart}
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-700 text-white shadow-soft transition hover:bg-brand-800 active:scale-95"
+            className="flex size-10 items-center justify-center rounded-xl bg-brand-700 text-white shadow-soft transition hover:bg-brand-800 active:scale-95"
             aria-label={`Ajouter ${product.name} au panier`}
           >
-            <CartIcon className="h-5 w-5" />
+            <CartIcon className="size-5" />
           </button>
         </div>
       </div>

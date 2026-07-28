@@ -19,39 +19,114 @@ export default {
   async bootstrap({ strapi }: { strapi: Core.Strapi }) {
     // Vérifier si des catégories existent déjà
     const categoryCount = await strapi.db.query('api::category.category').count();
-    
+
     if (categoryCount === 0) {
-      console.log('Seeding des données (Catégories et Produits)...');
-      
+      strapi.log.info('Seeding des données (Catégories et Produits)...');
+
       const categoriesData = [
-        { name: 'Soins visage', slug: 'soins-visage', tagline: 'Une peau saine, rayonnante', description: 'Crèmes, sérums et nettoyants dermocosmétiques pour tous les types de peau.' },
-        { name: 'Corps', slug: 'corps', tagline: 'Prenez soin de votre corps', description: 'Huiles, baumes et laits hydratants pour une peau douce et nourrie.' },
-        { name: 'Cheveux', slug: 'cheveux', tagline: 'Des cheveux forts et brillants', description: 'Shampoings, soins et sérums capillaires pour chaque nature de cheveu.' },
-        { name: 'Bébés & Mamans', slug: 'bebes-mamans', tagline: 'Douceur et sécurité', description: 'Soins adaptés aux bébés et aux mamans, testés sous contrôle dermatologique.' },
-        { name: 'Compléments alimentaires', slug: 'complements-alimentaires', tagline: "Votre bien-être de l'intérieur", description: 'Vitamines, minéraux et compléments pour soutenir votre vitalité.' }
+        {
+          name: 'Soins visage',
+          slug: 'soins-visage',
+          tagline: 'Une peau saine, rayonnante',
+          description: 'Crèmes, sérums et nettoyants dermocosmétiques pour tous les types de peau.',
+        },
+        {
+          name: 'Corps',
+          slug: 'corps',
+          tagline: 'Prenez soin de votre corps',
+          description: 'Huiles, baumes et laits hydratants pour une peau douce et nourrie.',
+        },
+        {
+          name: 'Cheveux',
+          slug: 'cheveux',
+          tagline: 'Des cheveux forts et brillants',
+          description: 'Shampoings, soins et sérums capillaires pour chaque nature de cheveu.',
+        },
+        {
+          name: 'Bébés & Mamans',
+          slug: 'bebes-mamans',
+          tagline: 'Douceur et sécurité',
+          description:
+            'Soins adaptés aux bébés et aux mamans, testés sous contrôle dermatologique.',
+        },
+        {
+          name: 'Compléments alimentaires',
+          slug: 'complements-alimentaires',
+          tagline: "Votre bien-être de l'intérieur",
+          description: 'Vitamines, minéraux et compléments pour soutenir votre vitalité.',
+        },
       ];
 
-      const createdCategories: Record<string, any> = {};
+      const createdCategories: Record<string, { documentId: string }> = {};
 
       for (const catData of categoriesData) {
         const cat = await strapi.documents('api::category.category').create({
           data: {
             ...catData,
-            documentId: undefined
+            documentId: undefined,
           },
-          status: 'published'
+          status: 'published',
         });
-        createdCategories[catData.slug] = cat;
+        createdCategories[catData.slug] = { documentId: cat.documentId };
       }
 
-      console.log('Catégories créées.');
+      strapi.log.info('Catégories créées.');
 
       const productsData = [
-        { name: 'Crème Hydratante visage', brand: 'Aqualia Thermal', price: 42.5, oldPrice: 52.0, shortDescription: "Hydratation intense 48h pour peaux sensibles, à l'eau thermale.", volume: '50 ml', badges: ['Promo', 'Best-seller'], rating: 4.8, reviews: 124, categorySlug: 'soins-visage' },
-        { name: 'Lait corps nourrissant', brand: 'Lipikar', price: 38.0, shortDescription: 'Lait corporel pour peaux sèches à atopiques, confort immédiat.', volume: '400 ml', badges: ['Best-seller'], rating: 4.7, reviews: 156, categorySlug: 'corps' },
-        { name: 'Shampoing doux fréquence', brand: 'Dercos', price: 26.0, shortDescription: 'Shampoing sans sulfates pour usage quotidien, tous types de cheveux.', volume: '250 ml', rating: 4.5, reviews: 134, categorySlug: 'cheveux' },
-        { name: 'Gel lavant doux bébé', brand: 'Mustibé', price: 24.0, shortDescription: 'Gel lavant visage et corps, pour la toilette quotidienne du bébé.', volume: '500 ml', rating: 4.8, reviews: 198, categorySlug: 'bebes-mamans' },
-        { name: 'Vitamine C 1000 mg', brand: 'VitalC', price: 35.0, shortDescription: 'Complément alimentaire pour soutenir le système immunitaire.', volume: '60 comprimés', badges: ['Best-seller'], rating: 4.6, reviews: 167, categorySlug: 'complements-alimentaires' }
+        {
+          name: 'Crème Hydratante visage',
+          brand: 'Aqualia Thermal',
+          price: 42.5,
+          oldPrice: 52.0,
+          shortDescription: "Hydratation intense 48h pour peaux sensibles, à l'eau thermale.",
+          volume: '50 ml',
+          badges: ['Promo', 'Best-seller'],
+          rating: 4.8,
+          reviews: 124,
+          categorySlug: 'soins-visage',
+        },
+        {
+          name: 'Lait corps nourrissant',
+          brand: 'Lipikar',
+          price: 38.0,
+          shortDescription: 'Lait corporel pour peaux sèches à atopiques, confort immédiat.',
+          volume: '400 ml',
+          badges: ['Best-seller'],
+          rating: 4.7,
+          reviews: 156,
+          categorySlug: 'corps',
+        },
+        {
+          name: 'Shampoing doux fréquence',
+          brand: 'Dercos',
+          price: 26.0,
+          shortDescription: 'Shampoing sans sulfates pour usage quotidien, tous types de cheveux.',
+          volume: '250 ml',
+          rating: 4.5,
+          reviews: 134,
+          categorySlug: 'cheveux',
+        },
+        {
+          name: 'Gel lavant doux bébé',
+          brand: 'Mustibé',
+          price: 24.0,
+          shortDescription: 'Gel lavant visage et corps, pour la toilette quotidienne du bébé.',
+          volume: '500 ml',
+          rating: 4.8,
+          reviews: 198,
+          categorySlug: 'bebes-mamans',
+        },
+        {
+          name: 'Vitamine C 1000 mg',
+          brand: 'VitalC',
+          price: 35.0,
+          shortDescription: 'Complément alimentaire pour soutenir le système immunitaire.',
+          volume: '60 comprimés',
+          badges: ['Best-seller'],
+          rating: 4.6,
+          reviews: 167,
+          categorySlug: 'complements-alimentaires',
+        },
       ];
 
       for (const prodData of productsData) {
@@ -60,13 +135,13 @@ export default {
           data: {
             ...rest,
             category: createdCategories[categorySlug].documentId,
-            documentId: undefined
+            documentId: undefined,
           },
-          status: 'published'
+          status: 'published',
         });
       }
-      
-      console.log('Produits créés. Seeding terminé.');
+
+      strapi.log.info('Produits créés. Seeding terminé.');
     }
   },
 };

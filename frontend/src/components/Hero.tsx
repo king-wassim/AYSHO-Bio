@@ -16,8 +16,8 @@ export default function Hero({ onShopNow }: HeroProps) {
     <section className="relative overflow-hidden bg-gradient-to-br from-brand-50 via-sand-50 to-brand-100">
       {/* Blobs décoratifs */}
       <div className="pointer-events-none absolute inset-0 opacity-40">
-        <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-brand-200 blur-3xl" />
-        <div className="absolute -right-24 bottom-0 h-96 w-96 rounded-full bg-sand-200 blur-3xl" />
+        <div className="absolute -left-24 -top-24 size-72 rounded-full bg-brand-200 blur-3xl" />
+        <div className="absolute -right-24 bottom-0 size-96 rounded-full bg-sand-200 blur-3xl" />
       </div>
 
       <div className="relative mx-auto grid max-w-7xl items-center gap-8 px-4 py-10 sm:py-16 lg:grid-cols-2 lg:py-24">
@@ -49,7 +49,7 @@ export default function Hero({ onShopNow }: HeroProps) {
                 key={f.label}
                 className="flex flex-col items-center gap-2 rounded-xl border border-sand-200 bg-white/70 p-3 text-center backdrop-blur sm:items-start sm:text-left"
               >
-                <f.icon className="h-5 w-5 text-brand-600" />
+                <f.icon className="size-5 text-brand-600" />
                 <span className="text-xs font-medium leading-tight text-slate-700">
                   {f.label}
                 </span>
@@ -64,10 +64,10 @@ export default function Hero({ onShopNow }: HeroProps) {
             <img
               src="https://images.pexels.com/photos/4465124/pexels-photo-4465124.jpeg?auto=compress&cs=tinysrgb&w=900"
               alt="Produits de parapharmacie AYSHO"
-              className="h-full w-full object-cover"
+              className="size-full object-cover"
               loading="eager"
             />
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-brand-900/70 to-transparent p-5">
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-brand-900/70 to-transparent p-5">
               <div className="flex items-center justify-between text-white">
                 <div>
                   <p className="text-xs uppercase tracking-wider opacity-80">Best-seller</p>

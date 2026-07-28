@@ -1,0 +1,20 @@
+# Frontend .dockerignore
+node_modules
+dist
+.git
+.gitignore
+README.md
+*.log
+.DS_Store
+.env
+.env.local
+.env.*.local
+*.md
+Dockerfile
+docker-compose*.yml
+nginx.conf
+*.sh
+.vscode
+.idea
+coverage
+.nyc_output

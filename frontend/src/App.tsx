@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { CartProvider } from './store/CartContext'
-import { type CategoryId } from './data/catalog'
-import { useCatalog } from './store/CatalogContext'
+import { CatalogProvider, useCatalog } from './store/CatalogContext'
+import { type CategoryId, type Product } from './data/catalog'
 import Header from './components/Header'
 import Hero from './components/Hero'
 import CategoryShowcase from './components/CategoryShowcase'
@@ -16,11 +16,11 @@ type View =
   | { name: 'category'; id: CategoryId }
   | { name: 'all' }
 
-export default function App() {
+function AppContent() {
   const { getCategoryById, loading, error } = useCatalog()
   const [view, setView] = useState<View>({ name: 'home' })
   const [checkoutOpen, setCheckoutOpen] = useState(false)
-  const [selectedProduct, setSelectedProduct] = useState<import('./data/catalog').Product | null>(null)
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
 
   const navigate = (target: 'home' | { type: 'category'; id: string } | 'all-products') => {
     if (target === 'home') {
@@ -51,7 +51,7 @@ export default function App() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-sand-50">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-brand-200 border-t-brand-700"></div>
+        <div className="size-12 animate-spin rounded-full border-4 border-brand-200 border-t-brand-700"></div>
       </div>
     )
   }
@@ -111,5 +111,13 @@ export default function App() {
         />
       </div>
     </CartProvider>
+  )
+}
+
+export default function App() {
+  return (
+    <CatalogProvider>
+      <AppContent />
+    </CatalogProvider>
   )
 }
