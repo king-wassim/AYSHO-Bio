@@ -30,17 +30,18 @@ RUN pnpm run build
 # Stage 2: Production - Nginx
 FROM nginx:alpine AS production
 
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
 # Copy built assets from builder
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Add health check endpoint
 RUN echo 'server { listen 80; location /health { return 200 "healthy\n"; add_header Content-Type text/plain; } }' > /etc/nginx/conf.d/health.conf
 
+# TLS bootstrap entrypoint (placeholder cert until certbot issues the real one)
+COPY entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
 # Expose port
 EXPOSE 80
 
-# Start nginx
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]

@@ -1,331 +1,108 @@
-# Deployment Guide
+# Déploiement (VPS OVHcloud)
 
-## Prerequisites
+Production sur un **seul VPS** : 2 vCPU, 4 GB RAM, 30-40 GB SSD, Ubuntu 22.04/24.04.
+Docker Compose + Nginx + PostgreSQL + Cloudinary + HTTPS Let's Encrypt.
 
-### Accounts Required
-- [ ] GitHub account
-- [ ] Cloudflare account (Pages)
-- [ ] Render account (Web Service)
-- [ ] Neon account (PostgreSQL)
-- [ ] Cloudinary account (Media)
+## 1. Prérequis
 
-### Local Tools
-- Node.js 20+
-- Docker Desktop
-- Git
-- pnpm (recommended) or npm
+- VPS OVHcloud accessible en SSH.
+- Domaine `aysho.tn` (records DNS à faire pointer vers l'IP publique).
+- Compte GitHub et dépôt avec les secrets suivants dans **Settings → Secrets and
+  variables → Actions** :
 
----
+| Secret | Usage |
+|--------|-------|
+| `VPS_HOST` | IP publique du VPS |
+| `VPS_USER` | utilisateur de déploiement (ex. `deploy`) |
+| `VPS_PORT` | port SSH (défaut `22`) |
+| `VPS_SSH_KEY` | **clé privée SSH** de l'utilisateur de déploiement (jamais dans le repo) |
 
-## 1. Initial Setup
+## 2. Provisionnement du VPS
 
-### Clone and Configure
 ```bash
-git clone https://github.com/your-org/aysho.git
-cd aysho
-
-# Copy environment templates
-cp backend/.env.example backend/.env.development
-cp frontend/.env.example frontend/.env.development
+sudo bash deploy/scripts/setup-vps.sh
 ```
 
-### Install Dependencies
+Installe Docker Engine + plugin Compose, configure UFW (`22,80,443`), fail2ban,
+la rotation des logs Docker, et le cron de renouvellement des certificats.
+
+Créer puis positionner les fichiers sur le serveur (depuis/vers le repo) :
+
 ```bash
-# Frontend
-cd frontend && pnpm install && cd ..
-
-# Backend
-cd backend && pnpm install && cd ..
+sudo mkdir -p /opt/aysho && sudo chown -R deploy:deploy /opt/aysho
+# Copier le repo, ex. :
+cd /opt/aysho && git clone <repo-url> . && git checkout main
+cp .env.example .env && nano .env     # remplir les vraies valeurs (SECRETS !)
 ```
 
-### Start Development
+> `.env` contient tous les secrets (PostgreSQL, clés Strapi, Cloudinary, Sentry).
+> Il est gitignoré et ne doit **jamais** être commité.
+
+## 3. Déploiement initial
+
 ```bash
-# Terminal 1: Backend (SQLite)
-cd backend && pnpm run dev
-
-# Terminal 2: Frontend
-cd frontend && pnpm run dev
+cd /opt/aysho
+bash deploy/scripts/deploy.sh          # pull + up -d + health checks
+bash deploy/scripts/certbot-init.sh    # certificat Let's Encrypt (HTTP-01)
 ```
 
-Access:
-- Frontend: http://localhost:5173
-- Backend: http://localhost:1337/admin
+Ordre : déployer **puis** émettre le certificat (le placeholder permet à Nginx de
+démarrer sans cert réel).
 
----
+Vérifier :
 
-## 2. Cloudflare Pages Setup
-
-### Create Project
-1. Go to [Cloudflare Pages](https://pages.cloudflare.com/)
-2. Connect GitHub repo
-3. Configure build:
-   - **Build command**: `cd frontend && pnpm run build`
-   - **Output directory**: `frontend/dist`
-   - **Root directory**: `/` (repo root)
-4. Add environment variables (see below)
-
-### Environment Variables (Cloudflare Pages)
-```
-VITE_API_URL=https://your-backend.onrender.com
-VITE_APP_NAME=AYSHO
-VITE_APP_URL=https://aysho.pages.dev
-```
-
-### Custom Domain (Optional)
-1. Pages > Custom domains > Add domain
-2. Add CNAME: `www` → `aysho.pages.dev`
-3. Add CNAME: `@` → `aysho.pages.dev` (or A/AAAA for apex)
-
----
-
-## 3. Neon PostgreSQL Setup
-
-### Create Database
-1. Go to [Neon Console](https://console.neon.tech/)
-2. Create project: `aysho-db`
-3. Copy connection string: `postgresql://user:pass@ep-xxx.us-east-1.aws.neon.tech/neondb?sslmode=require`
-
-### Configure Branching (Preview Environments)
-1. Create branch: `preview` (from `main`)
-2. Each PR gets automatic branch
-3. Connection string per branch
-
----
-
-## 4. Render Backend Setup
-
-### Create Web Service
-1. Go to [Render Dashboard](https://dashboard.render.com/)
-2. New > Web Service > Connect GitHub
-3. Configure:
-   - **Name**: `aysho-backend`
-   - **Region**: Oregon (US West) or Frankfurt (EU)
-   - **Branch**: `main`
-   - **Runtime**: Docker
-   - **Dockerfile Path**: `backend/Dockerfile`
-   - **Plan**: Free
-
-### Environment Variables (Render)
 ```bash
-# Required
-NODE_ENV=production
-DATABASE_URL=postgresql://... (from Neon)
-JWT_SECRET=<generate: openssl rand -base64 32>
-ADMIN_JWT_SECRET=<generate: openssl rand -base64 32>
-API_TOKEN_SALT=<generate: openssl rand -base64 32>
-TRANSFER_TOKEN_SALT=<generate: openssl rand -base64 32>
-ENCRYPTION_KEY=<generate: openssl rand -base64 32>
-
-# Cloudinary (required for uploads)
-CLOUDINARY_CLOUD_NAME=your-cloud-name
-CLOUDINARY_API_KEY=your-api-key
-CLOUDINARY_API_SECRET=your-api-secret
-
-# Frontend URL (for CORS)
-FRONTEND_URL=https://aysho.pages.dev
-
-# Optional
-SENTRY_DSN=https://xxx@sentry.io/xxx
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USER=...
-SMTP_PASS=...
-SMTP_FROM=noreply@aysho.com
-ADMIN_EMAIL=admin@aysho.com
-ADMIN_PASSWORD=secure-password
+curl -fsS https://aysho.tn/health          # "healthy"
+curl -fsS https://aysho.tn/api/health       # Strapi via Nginx
+curl -fsS https://aysho.tn/api/categories    # données
 ```
 
-### Health Check
-- **Path**: `/api/health`
-- **Interval**: 30s
-- **Timeout**: 10s
+## 4. Déploiements suivants
 
----
+**Via GitHub Actions (recommandé)** : merger dans `main` → CD build/push GHCR →
+SSH → `deploy.sh` (avec `IMAGE_TAG=<sha>`).
 
-## 5. Cloudinary Setup
+**Manuel** :
 
-### Create Account
-1. Go to [Cloudinary](https://cloudinary.com/)
-2. Create account, note credentials
-
-### Configure Upload Preset (Optional)
-1. Settings > Upload > Upload presets
-2. Create unsigned preset for direct client uploads
-3. Add to frontend `.env`
-
-### Webhook for Strapi
-1. Settings > Webhooks > Add webhook
-2. URL: `https://your-backend.onrender.com/api/upload/cloudinary-webhook`
-3. Events: `upload`, `delete`, `update`
-
----
-
-## 6. GitHub Actions Secrets
-
-Go to: GitHub Repo > Settings > Secrets > Actions
-
-### Required Secrets
-```
-# Cloudflare
-CLOUDFLARE_API_TOKEN=<from Cloudflare API Tokens>
-CLOUDFLARE_ACCOUNT_ID=<from Cloudflare dashboard>
-
-# Render
-RENDER_API_KEY=<from Render Account Settings>
-RENDER_SERVICE_ID=<from Render service URL>
-
-# Neon (for migration)
-NEON_API_KEY=<from Neon Console>
-NEON_PROJECT_ID=<from Neon project>
-
-# Cloudinary
-CLOUDINARY_CLOUD_NAME=...
-CLOUDINARY_API_KEY=...
-CLOUDINARY_API_SECRET=...
-
-# Production Database
-DATABASE_URL=postgresql://... (Neon main branch)
-
-# Admin
-ADMIN_EMAIL=admin@aysho.com
-ADMIN_PASSWORD=<secure-password>
-
-# Optional
-SENTRY_DSN=https://xxx@sentry.io/xxx
-SLACK_WEBHOOK_URL=https://hooks.slack.com/...
-```
-
-### Generate Secrets
 ```bash
-# JWT secrets (run locally)
-openssl rand -base64 32
+cd /opt/aysho
+IMAGE_TAG=<sha> bash deploy/scripts/deploy.sh
 ```
 
----
+## 5. Variables du `.env` de production
 
-## 7. First Deployment
+Voir [environment.md](./environment.md). Les clés Strapi se génèrent ainsi :
 
-### Push to Main
 ```bash
-git add .
-git commit -m "feat: initial production setup"
-git push origin main
+node -e "const c=require('crypto');console.log('APP_KEYS='+Array(4).fill(0).map(()=>c.randomBytes(32).toString('base64')).join(','));['API_TOKEN_SALT','ADMIN_JWT_SECRET','JWT_SECRET','TRANSFER_TOKEN_SALT','ENCRYPTION_KEY'].forEach(k=>console.log(k+'='+c.randomBytes(32).toString('base64')))"
 ```
 
-### Monitor Deployment
-1. **GitHub Actions**: Check CI/CD workflows
-2. **Cloudflare Pages**: Watch build logs
-3. **Render**: Watch service logs
-3. **Neon**: Verify tables created
+## 6. HTTPS & renouvellement
 
-### Post-Deploy Steps
+- Émission initiale : `certbot-init.sh` (challenge HTTP-01, webroot `/var/www/certbot`).
+- Renouvellement automatique : cron quotidien `/etc/cron.d/aysho-renew` → `certbot-renew.sh`
+  (recharge Nginx via `docker exec aysho-nginx nginx -s reload`).
+
+## 7. Rollback
+
 ```bash
-# Run migrations (auto-run on Render start)
-# Or manually:
-cd backend && DATABASE_URL="..." pnpm run db:migrate
-
-# Seed production data
-cd backend && NODE_ENV=production DATABASE_URL="..." node scripts/seed-production.js
+cd /opt/aysho
+IMAGE_TAG=<sha-précédent> bash deploy/scripts/rollback.sh
 ```
 
----
+Le rollback rejoue `up -d` avec le tag précédent et revérifie la santé. Les données
+PostgreSQL ne sont jamais touchées (volume persistant, jamais `down -v`).
 
-## 8. Preview Deployments
+## 8. Sauvegarde & restauration
 
-### Pull Request Flow
-1. Create PR → GitHub Actions runs CI
-2. Cloudflare Pages creates preview URL: `https://pr-123.aysho.pages.dev`
-3. Neon creates preview branch (auto)
-4. Render creates preview service (if configured)
+Voir [backup-and-recovery.md](./backup-and-recovery.md).
 
-### Preview Environment Variables
-Set in GitHub Actions or Cloudflare Pages project settings:
-```
-VITE_API_URL=https://pr-123-aysho-backend.onrender.com
-```
+## Checklist avant mise en production
 
----
-
-## 9. Rollback Procedure
-
-### Frontend (Cloudflare Pages)
-1. Pages > Deployments > Click "..." > "Rollback to this deployment"
-
-### Backend (Render)
-1. Render > Service > Deploys > Click "..." > "Rollback"
-
-### Database (Neon)
-1. Neon > Branches > Point-in-time restore
-2. Or: `pnpm run db:migrate down` (if migration reversible)
-
----
-
-## 10. Monitoring & Alerts
-
-### Health Checks
-- Backend: `https://your-backend.onrender.com/api/health`
-- Frontend: Cloudflare Pages health check
-
-### Logs
-- Render: Service > Logs
-- Cloudflare: Pages > Functions > Logs
-- Neon: Dashboard > Query editor
-
-### Alerts (Free Options)
-- **UptimeRobot**: 50 monitors free (5-min interval)
-- **Better Stack**: 10 monitors free
-- **Sentry**: 5k errors/month free
-
----
-
-## Troubleshooting
-
-### Build Fails
-```bash
-# Clear caches
-docker system prune -a
-pnpm store prune
-
-# Rebuild
-cd frontend && pnpm run build
-cd backend && docker build -t aysho-backend .
-```
-
-### Database Connection Fails
-- Check `DATABASE_URL` format
-- Verify Neon allows connections from Render IPs
-- Check SSL mode: `?sslmode=require`
-
-### CORS Errors
-- Verify `FRONTEND_URL` in backend env
-- Check Cloudflare Pages domain matches
-
-### Media Upload Fails
-- Verify Cloudinary credentials
-- Check webhook URL accessible
-- Verify Strapi upload plugin config
-
----
-
-## Cost Summary (Free Tier)
-
-| Service | Free Tier Limits |
-|---------|-----------------|
-| Cloudflare Pages | Unlimited bandwidth, 500 builds/mo |
-| Render Web Service | 750 hrs/mo (spins down) |
-| Neon PostgreSQL | 0.5 GB storage, 190 compute hrs |
-| Cloudinary | 25 GB storage, 25 GB bandwidth |
-| GitHub Actions | 2000 min/mo (private) |
-| **Total** | **$0/month** |
-
----
-
-## Next Steps
-
-- [ ] Set up custom domain
-- [ ] Configure email (SMTP)
-- [ ] Add Sentry error tracking
-- [ ] Set up Better Stack uptime monitoring
-- [ ] Configure Cloudflare WAF rules
-- [ ] Add automated backups (Neon PITR)
-- [ ] Document API with OpenAPI/Swagger
+- [ ] DNS `aysho.tn` → IP VPS, TTL faible (300)
+- [ ] `.env` complet et correct sur le VPS (générer des clés réelles)
+- [ ] Docker, UFW (22/80/443), fail2ban actifs
+- [ ] Première émission Let's Encrypt réussie
+- [ ] `https://aysho.tn/health`, `/api/health`, `/api/categories` OK
+- [ ] Premier `backup.sh` réussit ; rclone configuré si nécessaire
+- [ ] Secrets GitHub (`VPS_*`) positionnés pour le CD

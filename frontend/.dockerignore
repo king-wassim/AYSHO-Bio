@@ -12,8 +12,8 @@ README.md
 *.md
 Dockerfile
 docker-compose*.yml
-nginx.conf
 *.sh
+!entrypoint.sh
 .vscode
 .idea
 coverage

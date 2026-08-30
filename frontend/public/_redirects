@@ -1,9 +1,0 @@
-# Cloudflare Pages Redirects Configuration
-# SPA fallback - serve index.html for all routes
-/* /index.html 200
-
-# Legacy redirects (example)
-# /old-page /new-page 301
-
-# API proxy to backend (if needed for same-origin)
-# /api/* https://api.aysho.tn/:splat 200
