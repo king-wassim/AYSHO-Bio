@@ -67,6 +67,12 @@ exports/
 *.sqlite
 *.sqlite3
 
+# Old cloud provider tooling
+.neon
+.neon/
+.agents/skills/neon*
+.agents/skills/neon-postgres/
+
 # TypeScript
 *.tsbuildinfo
 
