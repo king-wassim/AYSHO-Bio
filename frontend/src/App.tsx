@@ -44,7 +44,6 @@ function AllProductsPage() {
 }
 
 function HomePage() {
-  const { getCategoryById } = useCatalog()
   const [checkoutOpen, setCheckoutOpen] = useState(false)
 
   const scrollToProducts = () => {

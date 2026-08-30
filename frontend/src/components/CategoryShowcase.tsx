@@ -1,5 +1,6 @@
 import { useCatalog } from '../store/CatalogContext'
 import { ChevronRightIcon } from './icons'
+import { optimizeMediaUrl } from '../lib/api'
 
 interface CategoryShowcaseProps {
   onSelect: (id: string) => void
@@ -29,10 +30,11 @@ export default function CategoryShowcase({ onSelect }: CategoryShowcaseProps) {
           >
             <div className="aspect-[4/3] overflow-hidden">
               <img
-                src={cat.image}
+                src={optimizeMediaUrl(cat.image, { w: 800 })}
                 alt={cat.name}
                 className="size-full object-cover transition duration-500 group-hover:scale-105"
                 loading="lazy"
+                decoding="async"
               />
             </div>
             <div className="absolute inset-0 bg-gradient-to-t from-brand-900/85 via-brand-900/20 to-transparent" />

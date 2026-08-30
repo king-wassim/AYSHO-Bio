@@ -1,4 +1,5 @@
 import type { Core } from '@strapi/strapi';
+import type { Context, Next } from 'koa';
 
 interface RateLimitStore {
   [key: string]: { count: number; resetTime: number };
@@ -15,47 +16,94 @@ setInterval(() => {
   });
 }, 60000);
 
-const rateLimitMiddleware: Core.MiddlewareFactory = (config, { strapi }) => {
-  const windowMs = (strapi.config.get('rate-limit.rateLimit.windowMs') as number | undefined) ?? 15 * 60 * 1000;
-  const maxRequests = (strapi.config.get('rate-limit.rateLimit.maxRequests') as number | undefined) ?? 100;
-  const message = (strapi.config.get('rate-limit.rateLimit.message') as string | undefined) ?? 'Too many requests, please try again later.';
-  const standardHeaders = (strapi.config.get('rate-limit.rateLimit.standardHeaders') as boolean | undefined) ?? true;
-  const legacyHeaders = (strapi.config.get('rate-limit.rateLimit.legacyHeaders') as boolean | undefined) ?? false;
+interface RouteRule {
+  match: RegExp;
+  windowMs: number;
+  max: number;
+}
 
-  strapi.log.info(`Rate limiting: ${maxRequests} requests per ${windowMs}ms`);
+const ROUTE_RULES: RouteRule[] = [
+  {
+    match: /^\/api\/health($|\/)/i,
+    windowMs: 15 * 60 * 1000,
+    max: 60,
+  },
+  {
+    match: /^\/api\/orders($|\/)/i,
+    windowMs: 60 * 60 * 1000,
+    max: 30,
+  },
+  {
+    match: /^\/api\/auth($|\/)/i,
+    windowMs: 15 * 60 * 1000,
+    max: 50,
+  },
+  {
+    match: /^\/admin($|\/)/i,
+    windowMs: 15 * 60 * 1000,
+    max: 300,
+  },
+  {
+    match: /.*/,
+    windowMs: 15 * 60 * 1000,
+    max: 200,
+  },
+];
 
-  return async (ctx, next) => {
-    const ip =
-      (ctx.request.ip as string | undefined) ??
-      String(ctx.request.headers['x-forwarded-for'] ?? 'unknown');
-    const key = `rate-limit:${ip}`;
+function getClientIp(ctx: Context): string {
+  const forwarded = ctx.request.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.includes(',')) {
+    const parts = forwarded.split(',').map((p: string) => p.trim());
+    return parts[parts.length - 1] || forwarded;
+  }
+  return ctx.request.ip ?? String(forwarded ?? 'unknown');
+}
+
+function resolveRule(path: string): RouteRule {
+  for (const rule of ROUTE_RULES) {
+    if (rule.match.test(path)) {
+      return rule;
+    }
+  }
+  return ROUTE_RULES[ROUTE_RULES.length - 1];
+}
+
+const rateLimitMiddleware: Core.MiddlewareFactory = (_config, { strapi }) => {
+  const isEnabled = strapi.config.get('rate-limit.enabled', true) as boolean;
+  if (!isEnabled) {
+    strapi.log.info('Rate limiting: disabled');
+    return async (_ctx: Context, _next: Next) => {
+      await _next();
+    };
+  }
+
+  strapi.log.info('Rate limiting: enabled');
+
+  return async (ctx: Context, next: Next) => {
+    const path: string = ctx.path ?? '';
+    const rule = resolveRule(path);
+
+    const ip = getClientIp(ctx);
+    const key = `rate-limit:${rule.max}:${rule.windowMs}:${ip}`;
     const now = Date.now();
 
     if (!store[key] || store[key].resetTime < now) {
-      store[key] = { count: 0, resetTime: now + windowMs };
+      store[key] = { count: 0, resetTime: now + rule.windowMs };
     }
 
     store[key].count++;
 
-    const remaining = Math.max(0, maxRequests - store[key].count);
+    const remaining = Math.max(0, rule.max - store[key].count);
     const resetTime = Math.ceil((store[key].resetTime - now) / 1000);
 
-    if (standardHeaders) {
-      ctx.set('RateLimit-Limit', maxRequests.toString());
-      ctx.set('RateLimit-Remaining', remaining.toString());
-      ctx.set('RateLimit-Reset', resetTime.toString());
-    }
+    ctx.set('RateLimit-Limit', rule.max.toString());
+    ctx.set('RateLimit-Remaining', remaining.toString());
+    ctx.set('RateLimit-Reset', resetTime.toString());
 
-    if (legacyHeaders) {
-      ctx.set('X-RateLimit-Limit', maxRequests.toString());
-      ctx.set('X-RateLimit-Remaining', remaining.toString());
-      ctx.set('X-RateLimit-Reset', resetTime.toString());
-    }
-
-    if (store[key].count > maxRequests) {
+    if (store[key].count > rule.max) {
       ctx.set('Retry-After', resetTime.toString());
       ctx.status = 429;
-      ctx.body = { error: { message, status: 429 } };
+      ctx.body = { error: { message: 'Too many requests, please try again later.', status: 429 } };
       return;
     }
 

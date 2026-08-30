@@ -2,6 +2,7 @@ import { formatPrice, type Product } from '../data/catalog'
 import { useCart } from '../store/CartContext'
 import { useNavigate } from 'react-router-dom'
 import { CartIcon, StarIcon } from './icons'
+import { optimizeMediaUrl } from '../lib/api'
 
 const badgeStyles: Record<string, string> = {
   Promo: 'bg-sand-400 text-brand-900',
@@ -33,10 +34,11 @@ export default function ProductCard({ product }: { product: Product }) {
     >
       <div className="relative aspect-square overflow-hidden bg-sand-50">
         <img
-          src={product.image}
+          src={optimizeMediaUrl(product.image, { w: 500 })}
           alt={product.name}
           className="size-full object-cover transition duration-500 group-hover:scale-105"
           loading="lazy"
+          decoding="async"
         />
         {product.badges && product.badges.length > 0 && (
           <div className="absolute left-3 top-3 flex flex-col gap-1.5">

@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { Category, CategoryId, Product } from '../data/catalog';
-
-const STRAPI_URL = import.meta.env.VITE_STRAPI_URL || 'http://localhost:1337';
+import { resolveMediaUrl, joinApi } from '../lib/api';
 
 // ── Strapi v5 response shapes ────────────────────────────────────────────────
 
@@ -41,6 +40,7 @@ interface StrapiProductAttrs {
   price?: number;
   oldPrice?: number;
   shortDescription?: string;
+  description?: string;
   volume?: string;
   badges?: string[];
   rating?: number;
@@ -63,6 +63,7 @@ interface StrapiProductItem {
   price?: number;
   oldPrice?: number;
   shortDescription?: string;
+  description?: string;
   volume?: string;
   badges?: string[];
   rating?: number;
@@ -100,7 +101,7 @@ function getMediaUrl(media: StrapiMedia | StrapiMedia[] | undefined): string {
     url = media.attributes.url;
   }
 
-  return url ? `${STRAPI_URL}${url}` : '';
+  return resolveMediaUrl(url || undefined);
 }
 
 function getMediaUrls(media: StrapiMedia | StrapiMedia[] | undefined): string[] {
@@ -123,11 +124,11 @@ function getMediaUrls(media: StrapiMedia | StrapiMedia[] | undefined): string[] 
   if (Array.isArray(media)) {
     for (const m of media) {
       const url = extractUrl(m);
-      if (url) urls.push(`${STRAPI_URL}${url}`);
+      if (url) urls.push(resolveMediaUrl(url));
     }
   } else {
     const url = extractUrl(media);
-    if (url) urls.push(`${STRAPI_URL}${url}`);
+    if (url) urls.push(resolveMediaUrl(url));
   }
 
   return urls;
@@ -157,8 +158,8 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
       try {
         setLoading(true);
         const [catsRes, prodsRes] = await Promise.all([
-          fetch(`${STRAPI_URL}/api/categories?populate=*`),
-          fetch(`${STRAPI_URL}/api/products?populate=*`),
+          fetch(joinApi('categories?populate=*')),
+          fetch(joinApi('products?populate=*')),
         ]);
 
         if (!catsRes.ok || !prodsRes.ok) {

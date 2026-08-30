@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { formatPrice } from '../data/catalog'
 import { useCart } from '../store/CartContext'
+import { joinApi } from '../lib/api'
 import {
   CheckIcon,
   CloseIcon,
@@ -8,8 +9,6 @@ import {
   TruckIcon,
   ShieldIcon,
 } from './icons'
-
-const STRAPI_URL = import.meta.env.VITE_STRAPI_URL || 'http://localhost:1337';
 
 interface CheckoutProps {
   onClose: () => void
@@ -96,7 +95,7 @@ const { items, totalPrice, clear } = useCart()
         }
       }
 
-      const res = await fetch(`${STRAPI_URL}/api/orders`, {
+      const res = await fetch(joinApi('orders'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

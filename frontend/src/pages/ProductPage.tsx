@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { formatPrice } from '../data/catalog'
 import { useCatalog } from '../store/CatalogContext'
 import { useCart } from '../store/CartContext'
+import { optimizeMediaUrl } from '../lib/api'
 import {
   StarIcon,
   CartIcon,
@@ -42,7 +43,7 @@ export default function ProductPage() {
       <div className="flex min-h-screen items-center justify-center bg-sand-50 px-4">
         <div className="text-center">
           <p className="font-display text-2xl font-bold text-brand-900">Produit introuvable</p>
-          <p className="mt-2 text-slate-500">Ce produit n'existe pas ou a été supprimé.</p>
+          <p className="mt-2 text-slate-500">Ce produit n&apos;existe pas ou a été supprimé.</p>
           <button
             onClick={() => navigate(-1)}
             className="mt-6 inline-flex items-center gap-2 rounded-xl bg-brand-700 px-6 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-brand-800"
@@ -60,8 +61,10 @@ export default function ProductPage() {
     addItem(product, quantity)
   }
 
-  const mainImage = product.gallery[selectedImageIndex] ?? product.image
-  const hasGallery = product.gallery.length > 1
+  const mainImage = (product.gallery && product.gallery.length > 0
+    ? product.gallery[selectedImageIndex] ?? product.image
+    : product.image) ?? ''
+  const hasGallery = (product.gallery?.length ?? 0) > 1
 
   return (
     <div className="min-h-screen bg-sand-50">
@@ -93,9 +96,10 @@ export default function ProductPage() {
           <div className="space-y-4">
             <div className="relative aspect-square overflow-hidden rounded-2xl bg-sand-50">
               <img
-                src={mainImage}
+                src={optimizeMediaUrl(mainImage, { w: 1200 })}
                 alt={product.name}
                 className="size-full object-cover transition-opacity duration-300"
+                fetchPriority="high"
               />
               {product.badges && product.badges.length > 0 && (
                 <div className="absolute left-4 top-4 flex flex-col gap-2">
@@ -120,7 +124,7 @@ export default function ProductPage() {
 
             {hasGallery && (
               <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                {product.gallery.map((img, idx) => (
+                {(product.gallery ?? []).map((img, idx) => (
                   <button
                     key={img}
                     onClick={() => setSelectedImageIndex(idx)}
@@ -133,9 +137,11 @@ export default function ProductPage() {
                     aria-current={idx === selectedImageIndex ? 'true' : 'false'}
                   >
                     <img
-                      src={img}
+                      src={optimizeMediaUrl(img, { w: 180 })}
                       alt={`Vue ${idx + 1} de ${product.name}`}
                       className="size-full object-cover"
+                      loading="lazy"
+                      decoding="async"
                     />
                   </button>
                 ))}

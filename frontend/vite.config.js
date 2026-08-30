@@ -18,10 +18,24 @@ export default defineConfig({
     server: {
         host: true,
         port: 5173,
+        proxy: {
+            '/api': {
+                target: 'http://localhost:1337',
+                changeOrigin: true,
+            },
+            '/admin': {
+                target: 'http://localhost:1337',
+                changeOrigin: true,
+            },
+            '/uploads': {
+                target: 'http://localhost:1337',
+                changeOrigin: true,
+            },
+        },
     },
     build: {
         outDir: 'dist',
-        sourcemap: true,
+        sourcemap: false,
         minify: 'terser',
         terserOptions: {
             compress: {
