@@ -1,4 +1,4 @@
-# AYSHO Bio - E-commerce Platform
+# Aysho - E-commerce Platform
 
 A modern e-commerce platform for organic and natural products, built with React, Strapi v5, and TypeScript.
 

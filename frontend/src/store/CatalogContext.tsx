@@ -103,6 +103,36 @@ function getMediaUrl(media: StrapiMedia | StrapiMedia[] | undefined): string {
   return url ? `${STRAPI_URL}${url}` : '';
 }
 
+function getMediaUrls(media: StrapiMedia | StrapiMedia[] | undefined): string[] {
+  if (!media) return [];
+
+  const urls: string[] = [];
+
+  const extractUrl = (m: StrapiMedia): string | undefined => {
+    if (m.url) return m.url;
+    if (m.attributes?.url) return m.attributes.url;
+    if (m.data) {
+      if (Array.isArray(m.data)) {
+        return m.data[0]?.url ?? m.data[0]?.attributes?.url;
+      }
+      return m.data.url ?? m.data.attributes?.url;
+    }
+    return undefined;
+  };
+
+  if (Array.isArray(media)) {
+    for (const m of media) {
+      const url = extractUrl(m);
+      if (url) urls.push(`${STRAPI_URL}${url}`);
+    }
+  } else {
+    const url = extractUrl(media);
+    if (url) urls.push(`${STRAPI_URL}${url}`);
+  }
+
+  return urls;
+}
+
 // ── Context ──────────────────────────────────────────────────────────────────
 
 interface CatalogContextType {
@@ -111,6 +141,7 @@ interface CatalogContextType {
   loading: boolean;
   error: string | null;
   getCategoryById: (id: string) => Category | undefined;
+  getProductById: (id: string) => Product | undefined;
 }
 
 const CatalogContext = createContext<CatalogContextType | undefined>(undefined);
@@ -152,6 +183,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
           const attrs = item.attributes ?? item;
           const catSlug =
             attrs.category?.slug ?? attrs.category?.data?.attributes?.slug ?? '';
+          const gallery = getMediaUrls(attrs.images ?? attrs.image);
           return {
             id: item.documentId ?? String(item.id ?? ''),
             name: attrs.name ?? '',
@@ -159,8 +191,10 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
             categoryId: catSlug as CategoryId,
             price: attrs.price ?? 0,
             oldPrice: attrs.oldPrice,
-            image: getMediaUrl(attrs.images ?? attrs.image),
+            image: gallery[0] ?? '',
+            gallery,
             shortDescription: attrs.shortDescription ?? '',
+            description: attrs.description ?? '',
             volume: attrs.volume ?? '',
             badges: attrs.badges ?? [],
             rating: attrs.rating ?? 5.0,
@@ -185,8 +219,12 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     return categories.find((c) => c.id === id);
   };
 
+  const getProductById = (id: string) => {
+    return products.find((p) => p.id === id);
+  };
+
   return (
-    <CatalogContext.Provider value={{ categories, products, loading, error, getCategoryById }}>
+    <CatalogContext.Provider value={{ categories, products, loading, error, getCategoryById, getProductById }}>
       {children}
     </CatalogContext.Provider>
   );

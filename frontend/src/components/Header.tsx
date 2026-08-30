@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useCart } from '../store/CartContext'
 import {
   CartIcon,
@@ -9,37 +10,36 @@ import {
 } from './icons'
 import SearchBar from './SearchBar'
 
-interface HeaderProps {
-  onNavigate: (target: 'home' | { type: 'category'; id: string } | 'all-products') => void
-  current: string
-}
-
-export default function Header({ onNavigate, current }: HeaderProps) {
+export default function Header() {
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
   const { totalItems, openCart } = useCart()
   const [mobileOpen, setMobileOpen] = useState(false)
 
+  const current = pathname === '/' ? 'home' : pathname === '/produits' ? 'all' : 'category'
+
   const goHome = () => {
-    onNavigate('home')
+    navigate('/')
     setMobileOpen(false)
   }
 
   const navAll = () => {
-    onNavigate('all-products')
+    navigate('/produits')
     setMobileOpen(false)
   }
-
-  return (
+{/*base < lg < xl */} 
+return (
     <header className="sticky top-0 z-40">
       {/* Top bar */}
-      <div className="bg-brand-800 text-xs text-brand-50">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2">
-          <span className="flex items-center gap-1.5">
-            <TruckIcon className="size-4 shrink-0" />
-            <span className="hidden sm:inline">Livraison à domicile gratuite partout en Tunisie</span>
-            <span className="sm:hidden">Livraison gratuite en Tunisie</span>
+      <div className="bg-brand-800 text-xl font-semibold text-brand-50 sm:text-2xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:py-4">
+          <span className="flex items-center gap-3">
+            <TruckIcon className="size-6 shrink-0 sm:size-7" />
+            <span className="hidden sm:inline">Livraison à domicile <span className="font-bold">gratuite</span> partout en Tunisie</span>
+            <span className="sm:hidden">Livraison <span className="font-bold">gratuite</span> en Tunisie</span>
           </span>
-          <span className="flex shrink-0 items-center gap-1.5">
-            <PhoneIcon className="size-4" />
+          <span className="flex shrink-0 items-center gap-3">
+            <PhoneIcon className="size-6 sm:size-7" />
             +216 92 901 310
           </span>
         </div>
@@ -53,13 +53,15 @@ export default function Header({ onNavigate, current }: HeaderProps) {
           {/* Gauche : Logo + "Tous les produits" desktop */}
           <div className="flex shrink-0 items-center gap-5">
             <button onClick={goHome} className="flex items-center gap-2.5">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-brand-700 text-white shadow-soft">
-                <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 5a3 3 0 0 1 3 3v3h3a3 3 0 0 1 0 6h-3v3a3 3 0 0 1-6 0v-3H6a3 3 0 0 1 0-6h3V8a3 3 0 0 1 3-3z" />
-                </svg>
-              </div>
-              <span className="font-display text-2xl font-extrabold tracking-tight text-brand-800">
-                AYSHO Bio
+              <span className="flex size-10 items-center justify-center overflow-hidden rounded-2xl bg-white ring-1 ring-sand-200 shadow-soft">
+                <img
+                  src="/LOGO.jpg"
+                  alt="Logo Aysho"
+                  className="size-full object-cover"
+                />
+              </span>
+              <span className="font-display text-3xl font-extrabold tracking-tight text-brand-800 sm:text-4xl">
+                Aysho
               </span>
             </button>
 

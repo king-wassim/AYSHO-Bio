@@ -1,52 +1,93 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { Routes, Route, useLocation, useParams } from 'react-router-dom'
 import { CartProvider } from './store/CartContext'
 import { CatalogProvider, useCatalog } from './store/CatalogContext'
-import { type CategoryId, type Product } from './data/catalog'
+import { type CategoryId } from './data/catalog'
 import Header from './components/Header'
 import Hero from './components/Hero'
 import CategoryShowcase from './components/CategoryShowcase'
 import ProductGrid from './components/ProductGrid'
 import CartDrawer from './components/CartDrawer'
 import Checkout from './components/Checkout'
-import ProductDetailModal from './components/ProductDetailModal'
 import Footer from './components/Footer'
+import ProductPage from './pages/ProductPage'
 
-type View =
-  | { name: 'home' }
-  | { name: 'category'; id: CategoryId }
-  | { name: 'all' }
-
-function AppContent() {
-  const { getCategoryById, loading, error } = useCatalog()
-  const [view, setView] = useState<View>({ name: 'home' })
-  const [checkoutOpen, setCheckoutOpen] = useState(false)
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-
-  const navigate = (target: 'home' | { type: 'category'; id: string } | 'all-products') => {
-    if (target === 'home') {
-      setView({ name: 'home' })
-    } else if (target === 'all-products') {
-      setView({ name: 'all' })
-    } else {
-      setView({ name: 'category', id: target.id as CategoryId })
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
+function ScrollToTop() {
+  const { pathname } = useLocation()
   useEffect(() => {
     window.scrollTo({ top: 0 })
-  }, [view])
+  }, [pathname])
+  return null
+}
 
-  const currentHeader =
-    view.name === 'category' ? view.id : view.name === 'all' ? 'all' : 'home'
+function CategoryPage() {
+  const { categoryId } = useParams<{ categoryId: string }>()
+  const { getCategoryById } = useCatalog()
+  const cat = categoryId ? getCategoryById(categoryId) : undefined
+
+  return (
+    <ProductGrid
+      categoryFilter={categoryId as CategoryId}
+      title={cat?.name ?? 'Rayon'}
+      subtitle={cat?.description}
+    />
+  )
+}
+
+function AllProductsPage() {
+  return (
+    <ProductGrid
+      title="Tous les produits"
+      subtitle="Parcourez l'ensemble du catalogue Aysho"
+    />
+  )
+}
+
+function HomePage() {
+  const { getCategoryById } = useCatalog()
+  const [checkoutOpen, setCheckoutOpen] = useState(false)
 
   const scrollToProducts = () => {
     document.getElementById('catalogue')?.scrollIntoView({ behavior: 'smooth' })
   }
 
   const handleCategorySelect = (id: string) => {
-    navigate({ type: 'category', id })
+    window.location.href = `/categorie/${id}`
   }
+
+  return (
+    <CartProvider>
+      <div className="flex min-h-screen flex-col">
+        <Header />
+
+        <main className="flex-1">
+          <ScrollToTop />
+          <Routes>
+            <Route path="/" element={
+              <>
+                <Hero onShopNow={scrollToProducts} />
+                <div id="catalogue">
+                  <CategoryShowcase onSelect={handleCategorySelect} />
+                  <ProductGrid title="Produits en vedette" />
+                </div>
+              </>
+            } />
+            <Route path="/produits" element={<AllProductsPage />} />
+            <Route path="/categorie/:categoryId" element={<CategoryPage />} />
+            <Route path="/produit/:id" element={<ProductPage />} />
+          </Routes>
+        </main>
+
+        <Footer />
+        <CartDrawer onCheckout={() => setCheckoutOpen(true)} />
+        {checkoutOpen && <Checkout onClose={() => setCheckoutOpen(false)} />}
+      </div>
+    </CartProvider>
+  )
+}
+
+function AppContent() {
+  const { loading, error } = useCatalog()
 
   if (loading) {
     return (
@@ -64,54 +105,7 @@ function AppContent() {
     )
   }
 
-  return (
-    <CartProvider>
-      <div className="flex min-h-screen flex-col">
-        <Header onNavigate={navigate} current={currentHeader} />
-
-        <main className="flex-1">
-          {view.name === 'home' && (
-            <>
-              <Hero onShopNow={scrollToProducts} />
-              <div id="catalogue">
-                <CategoryShowcase onSelect={handleCategorySelect} />
-                <ProductGrid
-                  title="Produits en vedette"
-                />
-              </div>
-            </>
-          )}
-
-          {view.name === 'all' && (
-            <ProductGrid
-              title="Tous les produits"
-              subtitle="Parcourez l'ensemble du catalogue AYSHO Bio"
-            />
-          )}
-
-          {view.name === 'category' && (() => {
-            const cat = getCategoryById(view.id)
-            return (
-              <ProductGrid
-                key={view.id}
-                categoryFilter={view.id}
-                title={cat?.name ?? 'Rayon'}
-                subtitle={cat?.description}
-              />
-            )
-          })()}
-        </main>
-
-        <Footer />
-        <CartDrawer onCheckout={() => setCheckoutOpen(true)} />
-        {checkoutOpen && <Checkout onClose={() => setCheckoutOpen(false)} />}
-        <ProductDetailModal
-          product={selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-        />
-      </div>
-    </CartProvider>
-  )
+  return <HomePage />
 }
 
 export default function App() {

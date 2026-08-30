@@ -1,0 +1,76 @@
+1- livrasion gratuit (en gras)
+2-logo dans 2 places 
+3-dermocosmétique
+
+Votre demande IaC : create an aws s3 bucket
+
+⏳ Pipeline en cours...
+
+
+======================================================================
+  🚀 IaC PIPELINE DÉMARRÉ
+  repo_id  : c87b88ac-d54e-497f-8f08-c03b7e16038f
+  provider : auto-detect
+  prompt   : create an aws s3 bucket
+======================================================================
+
+🔧 ACTION [planner]: Démarrage PLANNER
+🔧 ACTION [planner]: PLANNER budget tokens : ~1908 (entrée ~408 + sortie max 1500)
+🔧 ACTION [usage]: [openai/gpt-oss-120b] planner | prompt=491 completion=791 total=1282
+🔧 ACTION [planner]: Raw PLANNER response (len=870): E‑S3 or SSE‑KMS)","Block all public access using aws_s3_bucket_public_access_block","Enable versioning to protect against accidental deletions","Apply least‑privilege IAM policies for bucket access"]}
+👁️  OBSERVATION: Plan OK : AWS | 0 modules | region=us-east-1
+❌ ERROR: [provider.tf] generation failed: Error code: 400 - {'error': {'message': "Failed to validate JSON. Please adjust your prompt. See 'failed_generation' for more details.", 'type': 'invalid_request_error', 'code': 'json_validate_failed', 'failed_generation': ''}}
+🔧 ACTION [usage]: [openai/gpt-oss-120b] coder/outputs.tf | prompt=519 completion=581 total=1100
+🔧 ACTION [llm]: Groq 429 rate limit — attente 3s avant retry (tentative 1/4)
+🔧 ACTION [llm]: Groq 429 rate limit — attente 3s avant retry (tentative 1/4)
+🔧 ACTION [usage]: [openai/gpt-oss-120b] coder/main.tf | prompt=519 completion=1732 total=2251
+🔧 ACTION [usage]: [openai/gpt-oss-120b] coder/versions.tf | prompt=519 completion=496 total=1015
+🔧 ACTION [usage]: [openai/gpt-oss-120b] coder/variables.tf | prompt=519 completion=1177 total=1696
+🔧 ACTION [usage]: [openai/gpt-oss-120b] coder/terraform.tfvars | prompt=522 completion=276 total=798
+🔧 ACTION [validator]: Démarrage VALIDATOR
+🔧 ACTION [terraform]: Démarrage validation Terraform (fmt + validate)
+🔧 ACTION [terraform_fmt]: terraform fmt : modifié
+🔧 ACTION [terraform_cache]: terraform init avec cache : C:\Users\wassi\.terraform.d\plugin-cache
+❌ ERROR: terraform init échoué : 18 erreur(s)
+👁️  OBSERVATION: Validation : ❌ 18 erreur(s)
+🔧 ACTION [usage]: [openai/gpt-oss-120b] refiner | prompt=1142 completion=2915 total=4057
+🔧 ACTION [security_scanner]: Démarrage SECURITY SCANNER
+🔧 ACTION [checkov]: Démarrage scan Checkov (sécurité IaC)
+❌ ERROR: Impossible de parser la sortie JSON de Checkov
+👁️  OBSERVATION: Checkov : 0 OK | 0 KO (CRITICAL: 0, HIGH: 0)
+👁️  OBSERVATION: Security scan : ✅ 0 OK | ❌ 0 KO (CRITICAL: 0, HIGH: 0)
+🔧 ACTION [packager]: Démarrage PACKAGER
+🔧 ACTION [usage]: [openai/gpt-oss-120b] packager | prompt=558 completion=1346 total=1904
+🔧 ACTION [packager]: Archive créée : generated_repos\c87b88ac-d54e-497f-8f08-c03b7e16038f.zip
+
+✨ RESULT:
+✅ Infrastructure Terraform générée avec succès.
+Provider: aws | Fichiers: 6
+Validation: ⚠️ | Sécurité: 0 finding(s)
+Archive: generated_repos\c87b88ac-d54e-497f-8f08-c03b7e16038f.zip
+
+🔧 ACTION [memory_store]: State sauvegardé : generated_repos\.checkpoints\c87b88ac-d54e-497f-8f08-c03b7e16038f.json
+
+======================================================================
+  ✅ PIPELINE TERMINÉ — SUCCESS
+  📦 Archive : generated_repos\c87b88ac-d54e-497f-8f08-c03b7e16038f.zip
+======================================================================
+
+
+📁 Fichiers générés (6) :
+   • versions.tf
+   • variables.tf
+   • outputs.tf
+   • main.tf
+   • terraform.tfvars
+   • README.md
+
+📦 Archive : generated_repos\c87b88ac-d54e-497f-8f08-c03b7e16038f.zip
+
+============================================================
+📋 RÉSUMÉ FINAL
+============================================================
+✅ Infrastructure Terraform générée avec succès.
+Provider: aws | Fichiers: 6
+Validation: ⚠️ | Sécurité: 0 finding(s)
+Archive: generated_repos\c87b88ac-d54e-497f-8f08-c03b7e16038f.zip

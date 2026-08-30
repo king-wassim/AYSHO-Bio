@@ -1,9 +1,7 @@
 import { useMemo, useState } from 'react'
-import React from 'react'
-import { type CategoryId, type Product } from '../data/catalog'
+import { type CategoryId } from '../data/catalog'
 import { useCatalog } from '../store/CatalogContext'
 import ProductCard from './ProductCard'
-import ProductDetailModal from './ProductDetailModal'
 
 interface ProductGridProps {
   categoryFilter?: CategoryId | null
@@ -20,7 +18,6 @@ export default function ProductGrid({
 }: ProductGridProps) {
   const { products } = useCatalog()
   const [sort, setSort] = useState<SortKey>('price-asc')
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
 
   const filtered = useMemo(() => {
     let list = categoryFilter
@@ -44,8 +41,7 @@ export default function ProductGrid({
   }, [categoryFilter, products, sort])
 
   return (
-    <React.Fragment>
-      <section className="mx-auto max-w-7xl px-4 py-12">
+    <section className="mx-auto max-w-7xl px-4 py-12">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="font-display text-3xl font-bold text-brand-900">
@@ -64,7 +60,6 @@ export default function ProductGrid({
             onChange={(e) => setSort(e.target.value as SortKey)}
             className="rounded-lg border border-sand-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
           >
-            {/* <option value="featured">En vedette</option> */}
             <option value="price-asc">Prix croissant</option>
             <option value="price-desc">Prix décroissant</option>
             <option value="rating">Mieux notés</option>
@@ -72,34 +67,6 @@ export default function ProductGrid({
         </div>
       </div>
 
-{/* {!categoryFilter && (
-        <div className="no-scrollbar mb-8 flex gap-2 overflow-x-auto pb-1">
-          <button
-            onClick={() => setActiveCat(null)}
-            className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition ${
-              activeCat === null
-                ? 'bg-brand-700 text-white'
-                : 'border border-sand-200 bg-white text-slate-600 hover:border-brand-300'
-            }`}
-          >
-            Tout
-          </button>
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setActiveCat(cat.id)}
-              className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition ${
-                activeCat === cat.id
-                ? 'bg-brand-700 text-white'
-                : 'border border-sand-200 bg-white text-slate-600 hover:border-brand-300'
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
-        </div>
-      )}
-*/}
       {filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-sand-300 bg-white p-12 text-center">
           <p className="font-display text-lg font-semibold text-slate-700">
@@ -112,16 +79,10 @@ export default function ProductGrid({
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
           {filtered.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onClick={() => setSelectedProduct(product)}
-            />
+            <ProductCard key={product.id} product={product} />
           ))}
         </div>
       )}
     </section>
-      <ProductDetailModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
-    </React.Fragment>
   )
 }

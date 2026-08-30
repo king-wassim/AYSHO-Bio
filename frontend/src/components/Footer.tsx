@@ -42,12 +42,12 @@ export default function Footer() {
             </div>
             <div>
               <span className="block font-display text-2xl font-extrabold tracking-tight text-white">
-                AYSHO Bio
+                Aysho
               </span>
             </div>
           </div>
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-brand-200">
-          AYSHO Bio est une boutique de vente en ligne de produits alimentaires & cosmétiques 100% naturels.
+          Aysho est une boutique de vente en ligne de produits alimentaires & cosmétiques 100% naturels.
           </p>
           <div className="mt-4 flex items-center gap-2 text-sm text-brand-200">
             <PhoneIcon className="size-4" />
@@ -59,7 +59,7 @@ export default function Footer() {
 
       <div className="border-t border-brand-800">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-5 text-xs text-brand-300 sm:flex-row">
-          <p>© {new Date().getFullYear()} AYSHO Bio — Tous droits réservés.</p>
+          <p>© {new Date().getFullYear()} Aysho — Tous droits réservés.</p>
           <p>Livraison à domicile · Paiement à la livraison · Tunisie</p>
         </div>
       </div>

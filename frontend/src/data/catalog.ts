@@ -21,7 +21,9 @@ export interface Product {
   price: number
   oldPrice?: number
   image: string
+  gallery: string[]
   shortDescription: string
+  description?: string
   volume: string
   badges?: string[]
   rating: number

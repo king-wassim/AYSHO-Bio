@@ -1,0 +1,35 @@
+1. Déployer le VPS + Docker Compose (Nginx, React, Strapi, PostgreSQL) → accessible en HTTP sur l'IP, TEMPORAIREMENT
+        │
+2. Acheter le domaine .tn
+        │
+3. Pointer le DNS (enregistrement A) vers l'IP du VPS
+        │
+4. Attendre la propagation DNS (vérifiable avec `dig tonapp.tn` ou dnschecker.org)
+        │
+5. Lancer Certbot → il valide le domaine et génère le certificat HTTPS
+        │
+6. Nginx bascule en HTTPS (:443), redirection automatique HTTP → HTTPS
+
+
+
+                         Internet
+                             │
+                        (80 / 443)
+                             │
+                        ┌─────────┐
+                        │  Nginx  │◄── certbot-certs (volume)
+                        └────┬────┘
+                             │ frontend-network
+              ┌──────────────┴──────────────┐
+              ▼                              ▼
+        ┌───────────┐                  ┌───────────┐
+        │   React   │                  │  Strapi   │
+        │ (statique)│                  │  :1337    │
+        └───────────┘                  └─────┬─────┘
+                                              │ backend-network
+                                              ▼
+                                       ┌───────────────┐
+                                       │  PostgreSQL   │
+                                       │     :5432     │
+                                       └───────────────┘
+                                       (volume postgres-data)

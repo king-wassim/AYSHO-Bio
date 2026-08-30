@@ -361,7 +361,7 @@ const { items, totalPrice, clear } = useCart()
                 </div>
                 <div className="flex items-center gap-2 rounded-lg bg-sand-100 px-3 py-2 text-xs font-medium text-slate-700">
                   <TruckIcon className="size-4" />
-                  Livraison 24-48h
+                  Livraison <span className="font-bold">gratuite</span> 24-48h
                 </div>
               </div>
             </div>

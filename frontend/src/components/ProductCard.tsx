@@ -1,11 +1,7 @@
 import { formatPrice, type Product } from '../data/catalog'
 import { useCart } from '../store/CartContext'
+import { useNavigate } from 'react-router-dom'
 import { CartIcon, StarIcon } from './icons'
-
-interface ProductCardProps {
-  product: Product
-  onClick?: () => void
-}
 
 const badgeStyles: Record<string, string> = {
   Promo: 'bg-sand-400 text-brand-900',
@@ -13,8 +9,9 @@ const badgeStyles: Record<string, string> = {
   Nouveau: 'bg-emerald-500 text-white',
 }
 
-export default function ProductCard({ product, onClick }: ProductCardProps) {
+export default function ProductCard({ product }: { product: Product }) {
   const { addItem } = useCart()
+  const navigate = useNavigate()
 
   const discount = product.oldPrice
     ? Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)
@@ -25,9 +22,13 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
     addItem(product)
   }
 
+  const handleCardClick = () => {
+    navigate(`/produit/${product.id}`)
+  }
+
   return (
     <article
-      onClick={onClick}
+      onClick={handleCardClick}
       className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-soft transition hover:-translate-y-1 hover:shadow-card"
     >
       <div className="relative aspect-square overflow-hidden bg-sand-50">
