@@ -57,6 +57,7 @@ cd backend  && npm run lint && npx tsc --noEmit
 
 ## Documentation
 
+- [setup-vps-guide.md](./docs/setup-vps-guide.md) — guide pas-à-pas débutant pour mettre le site en ligne
 - [architecture.md](./docs/architecture.md) — schémas, réseaux, flux
 - [deployment.md](./docs/deployment.md) — provisioning VPS + déploiement
 - [environment.md](./docs/environment.md) — variables d'environnement
