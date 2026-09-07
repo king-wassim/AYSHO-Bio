@@ -40,12 +40,12 @@ export default function CartDrawer({ onCheckout }: CartDrawerProps) {
 
       {/* Drawer */}
       <aside
-        className={`fixed right-0 top-0 z-50 flex size-full max-w-md flex-col bg-sand-50 shadow-2xl transition-transform duration-300 ${
+        className={`fixed right-0 top-0 z-50 flex h-[100dvh] w-full max-w-md flex-col bg-sand-50 shadow-2xl transition-transform duration-300 ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         aria-hidden={!isOpen}
       >
-        <div className="flex items-center justify-between border-b border-sand-200 bg-white px-5 py-4">
+        <div className="flex items-center justify-between border-b border-sand-200 bg-white px-4 py-3 sm:px-5 sm:py-4">
           <div className="flex items-center gap-2">
             <CartIcon className="size-5 text-brand-700" />
             <h2 className="font-display text-lg font-bold text-brand-900">
@@ -146,7 +146,7 @@ export default function CartDrawer({ onCheckout }: CartDrawerProps) {
               ))}
             </div>
 
-            <div className="border-t border-sand-200 bg-white px-5 py-4">
+            <div className="border-t border-sand-200 bg-white px-4 py-4 sm:px-5">
               <div className="space-y-1.5 text-sm">
                 <div className="flex justify-between text-slate-600">
                   <span>Sous-total</span>

@@ -17,6 +17,35 @@ export default {
    * run jobs, or perform some special logic.
    */
   async bootstrap({ strapi }: { strapi: Core.Strapi }) {
+    const publicRole = await strapi.db.query('plugin::users-permissions.role').findOne({
+      where: { type: 'public' },
+    });
+
+    if (publicRole) {
+      const publicActions = [
+        'api::category.category.find',
+        'api::category.category.findOne',
+        'api::product.product.find',
+        'api::product.product.findOne',
+      ];
+
+      for (const action of publicActions) {
+        const permission = await strapi.db
+          .query('plugin::users-permissions.permission')
+          .findOne({ where: { action } });
+
+        if (!permission) {
+          await strapi.db.query('plugin::users-permissions.permission').create({
+            data: { action, enabled: true, role: publicRole.id },
+          });
+        } else if (!permission.enabled) {
+          await strapi.db
+            .query('plugin::users-permissions.permission')
+            .update({ where: { id: permission.id }, data: { enabled: true } });
+        }
+      }
+    }
+
     // Vérifier si des catégories existent déjà
     const categoryCount = await strapi.db.query('api::category.category').count();
 
@@ -142,6 +171,19 @@ export default {
       }
 
       strapi.log.info('Produits créés. Seeding terminé.');
+    }
+
+    const productsWithCategories = await strapi.db
+      .query('api::product.product')
+      .findMany({ where: { category: { $notNull: true } }, select: ['documentId'] });
+
+    for (const product of productsWithCategories) {
+      if (product.documentId) {
+        await strapi.documents('api::product.product').update({
+          documentId: product.documentId,
+          data: { category: null },
+        });
+      }
     }
   },
 };

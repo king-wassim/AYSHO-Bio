@@ -18,7 +18,7 @@ interface StrapiCategoryAttrs {
   tagline?: string;
   description?: string;
   images?: StrapiMedia | StrapiMedia[];
-  image?: StrapiMedia;
+  image?: StrapiMedia | string;
 }
 
 interface StrapiCategoryItem {
@@ -31,7 +31,7 @@ interface StrapiCategoryItem {
   tagline?: string;
   description?: string;
   images?: StrapiMedia | StrapiMedia[];
-  image?: StrapiMedia;
+  image?: StrapiMedia | string;
 }
 
 interface StrapiProductAttrs {
@@ -47,7 +47,9 @@ interface StrapiProductAttrs {
   reviews?: number;
   category?: {
     slug?: string;
-    data?: { attributes?: { slug?: string } };
+    data?:
+      | { slug?: string; attributes?: { slug?: string } }
+      | Array<{ slug?: string; attributes?: { slug?: string } }>;
   };
   images?: StrapiMedia | StrapiMedia[];
   image?: StrapiMedia;
@@ -70,7 +72,9 @@ interface StrapiProductItem {
   reviews?: number;
   category?: {
     slug?: string;
-    data?: { attributes?: { slug?: string } };
+    data?:
+      | { slug?: string; attributes?: { slug?: string } }
+      | Array<{ slug?: string; attributes?: { slug?: string } }>;
   };
   images?: StrapiMedia | StrapiMedia[];
   image?: StrapiMedia;
@@ -82,8 +86,9 @@ interface StrapiListResponse<T> {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function getMediaUrl(media: StrapiMedia | StrapiMedia[] | undefined): string {
+function getMediaUrl(media: StrapiMedia | StrapiMedia[] | string | undefined): string {
   if (!media) return '';
+  if (typeof media === 'string') return resolveMediaUrl(media);
 
   let url = '';
 
@@ -104,8 +109,9 @@ function getMediaUrl(media: StrapiMedia | StrapiMedia[] | undefined): string {
   return resolveMediaUrl(url || undefined);
 }
 
-function getMediaUrls(media: StrapiMedia | StrapiMedia[] | undefined): string[] {
+function getMediaUrls(media: StrapiMedia | StrapiMedia[] | string | undefined): string[] {
   if (!media) return [];
+  if (typeof media === 'string') return [resolveMediaUrl(media)];
 
   const urls: string[] = [];
 
@@ -132,6 +138,18 @@ function getMediaUrls(media: StrapiMedia | StrapiMedia[] | undefined): string[] 
   }
 
   return urls;
+}
+
+function getCategorySlug(category: StrapiProductAttrs['category']): string {
+  if (!category) return '';
+
+  const relatedCategory = Array.isArray(category.data) ? category.data[0] : category.data;
+  return (
+    category.slug ??
+    relatedCategory?.slug ??
+    relatedCategory?.attributes?.slug ??
+    ''
+  );
 }
 
 // ── Context ──────────────────────────────────────────────────────────────────
@@ -182,8 +200,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
 
         const mappedProducts: Product[] = prodsData.data.map((item) => {
           const attrs = item.attributes ?? item;
-          const catSlug =
-            attrs.category?.slug ?? attrs.category?.data?.attributes?.slug ?? '';
+          const catSlug = getCategorySlug(attrs.category);
           const gallery = getMediaUrls(attrs.images ?? attrs.image);
           return {
             id: item.documentId ?? String(item.id ?? ''),
@@ -214,6 +231,15 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     };
 
     void fetchData();
+
+    const refreshOnFocus = () => void fetchData();
+    const refreshTimer = window.setInterval(() => void fetchData(), 30_000);
+    window.addEventListener('focus', refreshOnFocus);
+
+    return () => {
+      window.clearInterval(refreshTimer);
+      window.removeEventListener('focus', refreshOnFocus);
+    };
   }, []);
 
   const getCategoryById = (id: string) => {

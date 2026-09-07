@@ -1,4 +1,13 @@
-import { TruckIcon, BanknoteIcon, ShieldIcon, PhoneIcon } from './icons'
+import {
+  TruckIcon,
+  BanknoteIcon,
+  ShieldIcon,
+  PhoneIcon,
+  MailIcon,
+  FacebookIcon,
+  InstagramIcon,
+  TikTokIcon,
+} from './icons'
 
 const reassurance = [
   { icon: BanknoteIcon, title: 'Paiement à la livraison', text: 'Payez en espèces au livreur, en toute confiance.' },
@@ -7,12 +16,19 @@ const reassurance = [
 
 ]
 
+const contactLinks = [
+  { label: 'contact@aysho.tn', href: 'mailto:contact@aysho.tn', icon: MailIcon },
+  { label: 'aysho.tn', href: 'https://www.facebook.com/share/1EGenJG1rd/', icon: FacebookIcon },
+  { label: 'aysho.tn', href: 'https://www.instagram.com/aysho.tn?igsi=ZmJ4NGlpcnl5azNv', icon: InstagramIcon },
+  { label: 'aysho.tn', href: 'https://tiktok.com/@aysho.tn', icon: TikTokIcon },
+]
+
 export default function Footer() {
   return (
     <footer className="mt-8 bg-brand-900 text-brand-50">
       {/* Reassurance strip */}
       <div className="border-b border-brand-800">
-        <div className="mx-auto grid max-w-7xl gap-6 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-7xl gap-5 px-4 py-8 sm:grid-cols-2 sm:gap-6 sm:py-10 lg:grid-cols-4">
           {reassurance.map((r) => (
             <div key={r.title} className="flex items-start gap-3">
               <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-800 text-brand-200">
@@ -32,7 +48,7 @@ export default function Footer() {
       </div>
 
       {/* Main footer */}
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 md:grid-cols-4">
+      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:gap-10 sm:py-12 md:grid-cols-4">
         <div className="md:col-span-2">
           <div className="flex items-center gap-2.5">
             <div className="flex size-10 items-center justify-center rounded-xl bg-brand-700 text-white">
@@ -51,16 +67,36 @@ export default function Footer() {
           </p>
           <div className="mt-4 flex items-center gap-2 text-sm text-brand-200">
             <PhoneIcon className="size-4" />
-            <span>+216 92 901 310</span>
+            <span>92 901 310</span>
+          </div>
+        </div>
+
+        <div className="md:col-span-2">
+          <h3 className="font-display text-sm font-bold uppercase tracking-wide text-white">
+            Contactez-nous
+          </h3>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {contactLinks.map(({ label, href, icon: Icon }) => (
+              <a
+                key={href}
+                href={href}
+                target={href.startsWith('http') ? '_blank' : undefined}
+                rel={href.startsWith('http') ? 'noreferrer' : undefined}
+                className="flex min-w-0 items-center gap-3 rounded-lg px-2 py-2 text-sm text-brand-200 transition hover:bg-brand-800 hover:text-white"
+              >
+                <Icon className="size-5 shrink-0" />
+                <span className="truncate">{label}</span>
+              </a>
+            ))}
           </div>
         </div>
 
       </div>
 
       <div className="border-t border-brand-800">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-5 text-xs text-brand-300 sm:flex-row">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-5 text-center text-xs text-brand-300 sm:flex-row sm:text-left">
           <p>© {new Date().getFullYear()} Aysho — Tous droits réservés.</p>
-          <p>Livraison à domicile · Paiement à la livraison · Tunisie</p>
+          <p className="max-w-full">Livraison à domicile · Paiement à la livraison · Tunisie</p>
         </div>
       </div>
     </footer>

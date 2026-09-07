@@ -62,6 +62,12 @@ const PRODUCTS_RESPONSE = {
         image: { attributes: { url: 'creme.jpg' } },
       },
     },
+    {
+      id: 3,
+      name: 'Magnésium marin',
+      category: { data: [{ slug: 'complements-alimentaires' }] },
+      image: { url: 'magnesium.jpg' },
+    },
   ],
 }
 
@@ -142,6 +148,10 @@ describe('CatalogProvider', () => {
     const prodCreme = screen.getByTestId('prod-2')
     expect(prodCreme).toHaveTextContent('Crème réparatrice')
     expect(prodCreme).toHaveTextContent('corps')
+
+    const prodMagnesium = screen.getByTestId('prod-3')
+    expect(prodMagnesium).toHaveTextContent('Magnésium marin')
+    expect(prodMagnesium).toHaveTextContent('complements-alimentaires')
   })
 
   it('surfaces fetch errors through the error state', async () => {

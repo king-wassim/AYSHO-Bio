@@ -10,7 +10,7 @@ WORKDIR /app
 COPY package*.json pnpm-lock.yaml ./
 
 # Install dependencies with cache
-RUN pnpm install --frozen-lockfile --prefer-offline
+RUN pnpm install --no-frozen-lockfile --prefer-offline
 
 # Copy source code
 COPY . .
@@ -34,7 +34,7 @@ FROM nginx:alpine AS production
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Add health check endpoint
-RUN echo 'server { listen 80; location /health { return 200 "healthy\n"; add_header Content-Type text/plain; } }' > /etc/nginx/conf.d/health.conf
+RUN apk add --no-cache openssl && echo 'server { listen 80; location /health { return 200 "healthy\n"; add_header Content-Type text/plain; } }' > /etc/nginx/conf.d/health.conf
 
 # TLS bootstrap entrypoint (placeholder cert until certbot issues the real one)
 COPY entrypoint.sh /docker-entrypoint.sh

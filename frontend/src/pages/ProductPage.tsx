@@ -68,8 +68,8 @@ export default function ProductPage() {
 
   return (
     <div className="min-h-screen bg-sand-50">
-      <div className="mx-auto max-w-7xl px-4 py-8">
-        <nav className="mb-6 flex items-center gap-2 text-sm text-slate-500" aria-label="Fil d'Ariane">
+      <div className="mx-auto max-w-7xl px-3 py-5 sm:px-4 sm:py-8">
+        <nav className="mb-5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 sm:mb-6 sm:gap-2 sm:text-sm" aria-label="Fil d'Ariane">
           <button
             onClick={() => navigate('/')}
             className="flex items-center gap-1.5 hover:text-brand-700"
@@ -89,17 +89,16 @@ export default function ProductPage() {
             </>
           )}
           <span>/</span>
-          <span className="text-slate-700 truncate max-w-[200px]">{product.name}</span>
+          <span className="max-w-[calc(100vw-6rem)] truncate text-slate-700 sm:max-w-[200px]">{product.name}</span>
         </nav>
 
         <div className="gap-8 animate-fade-up lg:grid lg:grid-cols-2 lg:gap-12">
           <div className="space-y-4">
             <div className="relative aspect-square overflow-hidden rounded-2xl bg-sand-50">
               <img
-                src={optimizeMediaUrl(mainImage, { w: 1200 })}
+                src={optimizeMediaUrl(mainImage, { w: 1600 })}
                 alt={product.name}
-                className="size-full object-cover transition-opacity duration-300"
-                fetchPriority="high"
+                className="size-full object-contain p-4 transition-opacity duration-300"
               />
               {product.badges && product.badges.length > 0 && (
                 <div className="absolute left-4 top-4 flex flex-col gap-2">
@@ -128,7 +127,7 @@ export default function ProductPage() {
                   <button
                     key={img}
                     onClick={() => setSelectedImageIndex(idx)}
-                    className={`flex-shrink-0 h-20 w-20 overflow-hidden rounded-xl border-2 transition ${
+                    className={`h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border-2 transition sm:h-20 sm:w-20 ${
                       idx === selectedImageIndex
                         ? 'border-brand-600 ring-2 ring-brand-200'
                         : 'border-transparent hover:border-brand-300'
@@ -139,7 +138,7 @@ export default function ProductPage() {
                     <img
                       src={optimizeMediaUrl(img, { w: 180 })}
                       alt={`Vue ${idx + 1} de ${product.name}`}
-                      className="size-full object-cover"
+                      className="size-full object-contain p-1"
                       loading="lazy"
                       decoding="async"
                     />
@@ -153,7 +152,7 @@ export default function ProductPage() {
             <p className="text-xs font-medium uppercase tracking-wide text-sand-500">
               {product.brand}
             </p>
-            <h1 className="font-display text-3xl font-bold leading-snug text-brand-900">
+            <h1 className="font-display text-2xl font-bold leading-snug text-brand-900 sm:text-3xl">
               {product.name}
             </h1>
 
@@ -174,7 +173,7 @@ export default function ProductPage() {
                   {formatPrice(product.oldPrice)} DT
                 </span>
               )}
-              <span className="font-display text-4xl font-bold text-brand-800">
+              <span className="font-display text-3xl font-bold text-brand-800 sm:text-4xl">
                 {formatPrice(product.price)} DT
               </span>
             </div>
@@ -204,7 +203,7 @@ export default function ProductPage() {
               <CartIcon className="size-5" />
               Ajouter au panier
             </button>
-            <div className="flex items-center gap-3 rounded-xl bg-emerald-50 px-6 py-4 text-base font-semibold text-emerald-800">
+            <div className="flex items-center gap-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 sm:px-6 sm:py-4 sm:text-base">
               <TruckIcon className="size-6 shrink-0" />
               Livraison gratuite partout en Tunisie
             </div>

@@ -439,12 +439,14 @@ export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> & Schema.Attribute.Private;
     customerAddress: Schema.Attribute.Text & Schema.Attribute.Required;
+    customerEmail: Schema.Attribute.Email;
     customerName: Schema.Attribute.String & Schema.Attribute.Required;
     customerPhone: Schema.Attribute.String & Schema.Attribute.Required;
     items: Schema.Attribute.JSON;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::order.order'> &
       Schema.Attribute.Private;
+    orderNumber: Schema.Attribute.String & Schema.Attribute.Unique;
     publishedAt: Schema.Attribute.DateTime;
     state: Schema.Attribute.Enumeration<['pending', 'confirmed', 'delivered', 'cancelled']> &
       Schema.Attribute.DefaultTo<'pending'>;

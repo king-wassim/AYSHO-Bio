@@ -1,6 +1,8 @@
 import type { Core } from '@strapi/strapi';
 
 function corsOrigins(): string[] | string {
+  // FRONTEND_URL can be a comma-separated list.
+  // In production: "https://aysho.tn,https://www.aysho.tn"
   const raw = process.env.FRONTEND_URL || 'http://localhost:5173';
   const origins = raw
     .split(',')

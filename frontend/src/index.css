@@ -8,9 +8,19 @@
   }
   body {
     @apply font-sans bg-sand-50 text-slate-800 antialiased;
+    min-width: 0;
   }
   h1, h2, h3, h4 {
     @apply font-display;
+  }
+}
+
+@layer components {
+  button,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
   }
 }
 

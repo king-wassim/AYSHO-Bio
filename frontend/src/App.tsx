@@ -50,10 +50,6 @@ function HomePage() {
     document.getElementById('catalogue')?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const handleCategorySelect = (id: string) => {
-    window.location.href = `/categorie/${id}`
-  }
-
   return (
     <CartProvider>
       <div className="flex min-h-screen flex-col">
@@ -66,7 +62,7 @@ function HomePage() {
               <>
                 <Hero onShopNow={scrollToProducts} />
                 <div id="catalogue">
-                  <CategoryShowcase onSelect={handleCategorySelect} />
+                  <CategoryShowcase />
                   <ProductGrid title="Produits en vedette" />
                 </div>
               </>

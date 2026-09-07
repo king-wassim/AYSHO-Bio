@@ -95,6 +95,34 @@ export const PhoneIcon = (props: IconProps) => (
   </svg>
 )
 
+export const MailIcon = (props: IconProps) => (
+  <svg {...base(props)}>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path d="m3 7 9 6 9-6" />
+  </svg>
+)
+
+export const FacebookIcon = (props: IconProps) => (
+  <svg {...base(props)} fill="currentColor" stroke="none">
+    <path d="M14 8h3V4h-3c-3.31 0-5 1.69-5 5v3H6v4h3v8h4v-8h3.2l.8-4H13V9c0-.67.33-1 1-1Z" />
+  </svg>
+)
+
+export const InstagramIcon = (props: IconProps) => (
+  <svg {...base(props)}>
+    <rect x="3" y="3" width="18" height="18" rx="5" />
+    <circle cx="12" cy="12" r="4" />
+    <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+  </svg>
+)
+
+export const TikTokIcon = (props: IconProps) => (
+  <svg {...base(props)}>
+    <path d="M15 3v11a4 4 0 1 1-4-4" />
+    <path d="M15 3c.7 2.5 2.2 4 5 4" />
+  </svg>
+)
+
 export const CheckIcon = (props: IconProps) => (
   <svg {...base(props)}>
     <path d="M20 6 9 17l-5-5" />

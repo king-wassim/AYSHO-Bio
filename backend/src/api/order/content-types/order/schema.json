@@ -19,9 +19,16 @@
       "type": "string",
       "required": true
     },
+    "customerEmail": {
+      "type": "email"
+    },
     "customerAddress": {
       "type": "text",
       "required": true
+    },
+    "orderNumber": {
+      "type": "string",
+      "unique": true
     },
     "totalPrice": {
       "type": "decimal"

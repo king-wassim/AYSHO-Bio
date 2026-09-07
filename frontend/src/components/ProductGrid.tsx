@@ -41,10 +41,10 @@ export default function ProductGrid({
   }, [categoryFilter, products, sort])
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-12">
+    <section className="mx-auto max-w-7xl px-3 py-8 sm:px-4 sm:py-12">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="font-display text-3xl font-bold text-brand-900">
+          <h2 className="font-display text-2xl font-bold text-brand-900 sm:text-3xl">
             {title}
           </h2>
           <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
@@ -77,7 +77,7 @@ export default function ProductGrid({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
           {filtered.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}

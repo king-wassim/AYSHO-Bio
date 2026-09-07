@@ -31,16 +31,16 @@ export default function Header() {
 return (
     <header className="sticky top-0 z-40">
       {/* Top bar */}
-      <div className="bg-brand-800 text-xl font-semibold text-brand-50 sm:text-2xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:py-4">
-          <span className="flex items-center gap-3">
-            <TruckIcon className="size-6 shrink-0 sm:size-7" />
-            <span className="hidden sm:inline">Livraison à domicile <span className="font-bold">gratuite</span> partout en Tunisie</span>
-            <span className="sm:hidden">Livraison <span className="font-bold">gratuite</span> en Tunisie</span>
+      <div className="bg-brand-800 text-xs font-semibold text-brand-50 sm:text-base">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-2.5 sm:px-4 sm:py-3">
+          <span className="flex min-w-0 items-center gap-2">
+            <TruckIcon className="size-4 shrink-0 sm:size-5" />
+            <span className="truncate sm:hidden">Livraison gratuite en toute la Tunisie</span>
+            <span className="hidden truncate sm:inline">Livraison à domicile gratuite en toute la Tunisie</span>
           </span>
-          <span className="flex shrink-0 items-center gap-3">
-            <PhoneIcon className="size-6 sm:size-7" />
-            +216 92 901 310
+          <span className="flex shrink-0 items-center gap-1.5 text-[11px] sm:gap-2 sm:text-sm">
+            <PhoneIcon className="size-4 sm:size-5" />
+            92 901 310
           </span>
         </div>
       </div>
@@ -48,19 +48,19 @@ return (
       {/* Main bar */}
       <div className="border-b border-sand-200 bg-white/95 shadow-sm backdrop-blur">
         {/* Logo + nav + search + panier */}
-        <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3">
+        <div className="mx-auto flex max-w-7xl items-center gap-2 px-3 py-2.5 sm:gap-4 sm:px-4 sm:py-3">
 
           {/* Gauche : Logo + "Tous les produits" desktop */}
-          <div className="flex shrink-0 items-center gap-5">
-            <button onClick={goHome} className="flex items-center gap-2.5">
-              <span className="flex size-10 items-center justify-center overflow-hidden rounded-2xl bg-white ring-1 ring-sand-200 shadow-soft">
+          <div className="flex min-w-0 shrink-0 items-center gap-3 sm:gap-5">
+            <button onClick={goHome} className="flex min-w-0 items-center gap-2.5">
+              <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white ring-1 ring-sand-200 shadow-soft sm:size-10">
                 <img
                   src="/LOGO.jpg"
                   alt="Logo Aysho"
                   className="size-full object-cover"
                 />
               </span>
-              <span className="font-display text-3xl font-extrabold tracking-tight text-brand-800 sm:text-4xl">
+              <span className="font-display text-2xl font-extrabold tracking-tight text-brand-800 sm:text-4xl">
                 Aysho
               </span>
             </button>
@@ -110,7 +110,7 @@ return (
         </div>
 
         {/* SearchBar mobile — toujours visible sous la barre principale */}
-        <div className="border-t border-sand-100 px-4 py-2.5 lg:hidden">
+        <div className="border-t border-sand-100 px-3 py-2.5 sm:px-4 lg:hidden">
           <SearchBar fullWidth />
         </div>
 

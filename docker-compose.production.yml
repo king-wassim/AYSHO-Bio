@@ -27,7 +27,7 @@ services:
     environment:
       AYSHO_DOMAIN: ${AYSHO_DOMAIN:-aysho.tn}
     volumes:
-      - ./deploy/nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/nginx/conf.d/default.conf:/etc/nginx/nginx.conf:ro
       - certbot-certs:/etc/letsencrypt
       - certbot-challenges:/var/www/certbot
     networks:
@@ -74,6 +74,9 @@ services:
       DATABASE_POOL_MAX: 10
       # Frontend (CORS) - same-origin via nginx, kept strict
       FRONTEND_URL: https://aysho.tn
+      # Public URL: tells Strapi the external URL it is served at (needed for
+      # admin panel asset paths when behind a reverse proxy).
+      PUBLIC_URL: https://aysho.tn
       # Cloudinary - the only media provider in production
       UPLOAD_PROVIDER: cloudinary
       CLOUDINARY_NAME: ${CLOUDINARY_NAME}
@@ -84,6 +87,10 @@ services:
       SENTRY_ENABLED: ${SENTRY_ENABLED:-false}
       SENTRY_DSN: ${SENTRY_DSN:-}
       SENTRY_ENVIRONMENT: production
+      # Resend email notifications (new order alerts)
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM: ${RESEND_FROM:-on@resend.dev}
+      RESEND_TO: ${RESEND_TO}
       # Rate limiting
       RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
       RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}

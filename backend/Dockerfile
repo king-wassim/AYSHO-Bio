@@ -20,7 +20,7 @@ COPY package*.json pnpm-lock.yaml ./
 FROM base AS builder
 
 # Install all dependencies (including devDependencies)
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Copy source code
 COPY . .
@@ -32,7 +32,7 @@ RUN pnpm run build
 FROM base AS production-deps
 
 # Install only production dependencies
-RUN pnpm install --prod --frozen-lockfile \
+RUN pnpm install --prod --no-frozen-lockfile \
     && pnpm store prune
 
 # Stage 4: Production runtime
@@ -46,24 +46,29 @@ WORKDIR /app
 RUN apk add --no-cache \
     vips \
     curl \
-    && addgroup -g 1000 -S nodejs \
-    && adduser -S strapi -u 1000 -G nodejs
+    && addgroup -S strapi \
+    && adduser -S strapi -G strapi
 
 # Copy production dependencies
-COPY --from=production-deps --chown=strapi:nodejs /app/node_modules ./node_modules
+COPY --from=production-deps --chown=strapi:strapi /app/node_modules ./node_modules
 
 # Copy built application
-COPY --from=builder --chown=strapi:nodejs /app/dist ./dist
-COPY --from=builder --chown=strapi:nodejs /app/package.json ./package.json
-COPY --from=builder --chown=strapi:nodejs /app/config ./config
-COPY --from=builder --chown=strapi:nodejs /app/src ./src
-COPY --from=builder --chown=strapi:nodejs /app/public ./public
-COPY --from=builder --chown=strapi:nodejs /app/node_modules/.pnpm ./node_modules/.pnpm
-COPY --from=builder --chown=strapi:nodejs /app/node_modules/.modules.yaml ./node_modules/.modules.yaml
+COPY --from=builder --chown=strapi:strapi /app/dist ./dist
+COPY --from=builder --chown=strapi:strapi /app/package.json ./package.json
+COPY --from=builder --chown=strapi:strapi /app/dist/config ./config
+COPY --from=builder --chown=strapi:strapi /app/dist/src ./src
+COPY --from=builder --chown=strapi:strapi /app/public ./public
+COPY --from=builder --chown=strapi:strapi /app/node_modules/.pnpm ./node_modules/.pnpm
+COPY --from=builder --chown=strapi:strapi /app/node_modules/.modules.yaml ./node_modules/.modules.yaml
+
+# Strapi serves the generated admin entrypoint from its package runtime path.
+RUN admin_dir="$(find node_modules/.pnpm -type d -path '*/node_modules/@strapi/admin' | head -n 1)" \
+    && mkdir -p "$admin_dir/dist/server/server/build" \
+    && cp -R dist/build/. "$admin_dir/dist/server/server/build/"
 
 # Create necessary directories
-RUN mkdir -p .tmp public/uploads \
-    && chown -R strapi:nodejs .tmp public/uploads
+RUN mkdir -p database/migrations .tmp public/uploads \
+    && chown -R strapi:strapi database .tmp public/uploads
 
 # Switch to non-root user
 USER strapi
@@ -76,4 +81,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD node -e "require('http').get('http://localhost:1337/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
 
 # Start Strapi
-CMD ["pnpm", "start"]
+CMD ["node", "node_modules/@strapi/strapi/bin/strapi.js", "start"]

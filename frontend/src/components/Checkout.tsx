@@ -50,6 +50,7 @@ const { items, totalPrice, clear } = useCart()
   const [submitted, setSubmitted] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [orderId, setOrderId] = useState('')
+  const [confirmedTotal, setConfirmedTotal] = useState(0)
 
   const grandTotal = totalPrice
 
@@ -83,6 +84,7 @@ const { items, totalPrice, clear } = useCart()
         data: {
           customerName: `${form.firstName} ${form.lastName}`,
           customerPhone: form.phone,
+          customerEmail: form.email,
           customerAddress: `${form.address}, ${form.city}, ${form.governorate} - Notes: ${form.notes}`,
           totalPrice: grandTotal,
           state: 'pending',
@@ -113,8 +115,16 @@ const { items, totalPrice, clear } = useCart()
       const resData = (await res.json()) as OrderResponse;
 
       const rawId = resData.data.documentId ?? String(resData.data.id ?? '');
-      const id = 'AYSHO-' + rawId.slice(-6).toUpperCase()
+
+      let id: string;
+      if (resData.data.id !== undefined && resData.data.id !== null) {
+        id = 'AYSHO-' + String(resData.data.id).padStart(6, '0')
+      } else {
+        id = 'AYSHO-' + rawId.toUpperCase()
+      }
+
       setOrderId(id)
+      setConfirmedTotal(grandTotal)
       setSubmitted(true)
       clear()
     } catch (err) {
@@ -151,7 +161,7 @@ const { items, totalPrice, clear } = useCart()
               <div className="mt-2 flex justify-between text-sm">
                 <span className="text-slate-500">Montant à payer</span>
                 <span className="font-display font-bold text-brand-800">
-                  {formatPrice(grandTotal)} DT
+                  {formatPrice(confirmedTotal)} DT
                 </span>
               </div>
               <div className="mt-2 flex justify-between text-sm">
@@ -196,8 +206,8 @@ const { items, totalPrice, clear } = useCart()
 
   return (
     <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-brand-900/50 p-4 backdrop-blur-sm sm:items-center">
-      <div className="my-4 w-full max-w-2xl animate-fade-up overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-sand-200 bg-white px-6 py-4">
+      <div className="my-2 w-full max-w-2xl animate-fade-up overflow-hidden rounded-2xl bg-white shadow-2xl sm:my-4">
+      <div className="flex items-center justify-between border-b border-sand-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
           <div>
             <h2 className="font-display text-xl font-bold text-brand-900">
               Finaliser la commande
@@ -216,7 +226,7 @@ const { items, totalPrice, clear } = useCart()
         </div>
 
         <form onSubmit={(e) => { void handleSubmit(e); }} className="max-h-[75vh] overflow-y-auto">
-          <div className="grid gap-6 p-6 md:grid-cols-5">
+          <div className="grid gap-5 p-4 sm:p-6 md:grid-cols-5">
             {/* Coordinates */}
             <div className="space-y-4 md:col-span-3">
               <div>
@@ -228,7 +238,7 @@ const { items, totalPrice, clear } = useCart()
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <Field
                   label="Prénom"
                   required
@@ -273,7 +283,7 @@ const { items, totalPrice, clear } = useCart()
                 error={errors.address}
               />
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <Field
                   label="Ville"
                   required
@@ -366,7 +376,7 @@ const { items, totalPrice, clear } = useCart()
             </div>
           </div>
 
-          <div className="border-t border-sand-200 bg-sand-50 px-6 py-4">
+          <div className="border-t border-sand-200 bg-sand-50 px-4 py-4 sm:px-6">
             <button
               type="submit"
               disabled={items.length === 0 || isSubmitting}

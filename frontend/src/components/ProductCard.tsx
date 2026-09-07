@@ -30,13 +30,13 @@ export default function ProductCard({ product }: { product: Product }) {
   return (
     <article
       onClick={handleCardClick}
-      className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-soft transition hover:-translate-y-1 hover:shadow-card"
+      className="group flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-soft transition hover:-translate-y-1 hover:shadow-card"
     >
       <div className="relative aspect-square overflow-hidden bg-sand-50">
         <img
-          src={optimizeMediaUrl(product.image, { w: 500 })}
+          src={optimizeMediaUrl(product.image, { w: 1000 })}
           alt={product.name}
-          className="size-full object-cover transition duration-500 group-hover:scale-105"
+          className="size-full max-w-full object-contain p-2 transition duration-500 group-hover:scale-[1.02] sm:p-3"
           loading="lazy"
           decoding="async"
         />
@@ -61,14 +61,14 @@ export default function ProductCard({ product }: { product: Product }) {
         )}
       </div>
 
-      <div className="flex flex-1 flex-col p-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-sand-500">
+      <div className="flex flex-1 flex-col p-2.5 sm:p-4">
+        <p className="text-xs font-medium tracking-wide text-sand-500">
           {product.brand}
         </p>
-        <h3 className="mt-1 font-display text-base font-semibold leading-snug text-slate-800">
+        <h3 className="mt-1 break-words font-display text-sm font-semibold leading-snug text-slate-800 sm:text-base">
           {product.name}
         </h3>
-        <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-slate-500">
+        <p className="mt-1.5 line-clamp-2 text-[11px] leading-relaxed text-slate-500 sm:text-xs">
           {product.shortDescription}
         </p>
 
@@ -78,7 +78,7 @@ export default function ProductCard({ product }: { product: Product }) {
             {product.rating.toFixed(1)}
           </span>
           <span className="text-xs text-slate-400">({product.reviews})</span>
-          <span className="ml-auto text-xs text-slate-400">{product.volume}</span>
+          <span className="ml-auto max-w-[45%] truncate text-[10px] text-slate-400 sm:text-xs">{product.volume}</span>
         </div>
 
         <div className="mt-3 flex items-end justify-between">
@@ -88,7 +88,7 @@ export default function ProductCard({ product }: { product: Product }) {
                 {formatPrice(product.oldPrice)} DT
               </span>
             )}
-            <span className="font-display text-lg font-bold text-brand-800">
+            <span className="font-display text-base font-bold text-brand-800 sm:text-lg">
               {formatPrice(product.price)}{' '}
               <span className="text-sm font-semibold">DT</span>
             </span>
