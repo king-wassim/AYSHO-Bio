@@ -30,6 +30,8 @@ export default {
         'api::category.category.findOne',
         'api::product.product.find',
         'api::product.product.findOne',
+        // Orders: public create (no auth required — COD store, no user accounts)
+        'api::order.order.create',
       ];
 
       for (const action of publicActions) {
