@@ -15,11 +15,9 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Admin => 
   secrets: {
     encryptionKey: env('ENCRYPTION_KEY')!,
   },
-  // When running behind a reverse proxy (nginx -> strapi:1337),
-  // Strapi needs to know the public URL so that the admin panel
-  // loads its JS/CSS bundles from the correct origin.
-  // Set PUBLIC_URL=https://aysho.tn in production .env.
-  url: env('PUBLIC_URL', ''),
+  // Admin panel URL — must include /admin path so Strapi generates
+  // correct internal navigation links behind the nginx reverse proxy.
+  url: env('ADMIN_URL', '/admin'),
   flags: {
     nps: env.bool('FLAG_NPS', false),
     promoteEE: env.bool('FLAG_PROMOTE_EE', false),
