@@ -85,6 +85,8 @@ exports/
 *.sublime-workspace
 
 # Package manager
+# NOTE: pnpm-lock.yaml is intentionally NOT ignored.
+# Lockfiles must be committed so CI/CD can run `pnpm install --frozen-lockfile`.
+# Only ignore yarn.lock because this project uses pnpm exclusively.
 yarn.lock
-pnpm-lock.yaml
 npm-debug.log*

@@ -7,10 +7,8 @@ on:
 
 env:
   NODE_VERSION: '22'
+  PNPM_VERSION: '10'
   REGISTRY: ghcr.io
-  IMAGE_NAME: aysho/aysho
-  # Lowercased owner used by docker-compose.production.yml as ${GHCR_OWNER}
-  GHCR_OWNER: ${{ github.repository_owner }}
 
 jobs:
   # ==========================================
@@ -23,11 +21,21 @@ jobs:
       contents: read
       packages: write
     outputs:
-      frontend-tag: ${{ steps.meta-frontend.outputs.tags }}
-      backend-tag: ${{ steps.meta-backend.outputs.tags }}
+      image-tag: ${{ steps.set-tag.outputs.tag }}
+      owner: ${{ steps.set-tag.outputs.owner }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # GHCR requires lowercase image names.
+      # github.repository_owner may contain uppercase letters.
+      - name: Compute lowercase owner and image tag
+        id: set-tag
+        shell: bash
+        run: |
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "owner=${OWNER_LC}" >> "$GITHUB_OUTPUT"
+          echo "tag=sha-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -39,13 +47,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # ------------------------------------------------------------------
+      # FRONTEND
+      # ------------------------------------------------------------------
       - name: Extract metadata (frontend)
         id: meta-frontend
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.GHCR_OWNER }}/aysho-frontend
+          images: ${{ env.REGISTRY }}/${{ steps.set-tag.outputs.owner }}/aysho-frontend
           tags: |
-            type=sha,format=long
+            type=sha,format=long,prefix=sha-
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push frontend
@@ -58,13 +69,16 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # ------------------------------------------------------------------
+      # BACKEND
+      # ------------------------------------------------------------------
       - name: Extract metadata (backend)
         id: meta-backend
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.GHCR_OWNER }}/aysho-backend
+          images: ${{ env.REGISTRY }}/${{ steps.set-tag.outputs.owner }}/aysho-backend
           tags: |
-            type=sha,format=long
+            type=sha,format=long,prefix=sha-
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push backend
@@ -78,7 +92,7 @@ jobs:
           cache-to: type=gha,mode=max
 
   # ==========================================
-  # DEPLOY TO VPS VIA SSH (deploy.sh on the server)
+  # DEPLOY TO VPS VIA SSH
   # ==========================================
   deploy:
     name: Deploy to VPS (aysho.tn)
@@ -97,11 +111,17 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
           command_timeout: 20m
+          envs: DEPLOY_SHA,GHCR_OWNER
           script: |
-            set -e
+            set -euo pipefail
             cd /opt/aysho
             git pull --ff-only || true
-            IMAGE_TAG=${{ github.sha }} bash deploy/scripts/deploy.sh
+            export IMAGE_TAG="sha-${DEPLOY_SHA}"
+            export GHCR_OWNER="${GHCR_OWNER}"
+            bash deploy/scripts/deploy.sh
+        env:
+          DEPLOY_SHA: ${{ github.sha }}
+          GHCR_OWNER: ${{ needs.build-and-push.outputs.owner }}
 
   # ==========================================
   # SMOKE TESTS AGAINST PRODUCTION
@@ -111,20 +131,19 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Wait for services to stabilise
+        run: sleep 15
 
       - name: Test frontend health
         run: |
-          sleep 10
           curl -fsS https://aysho.tn/health || exit 1
           curl -fsS https://aysho.tn/ || exit 1
 
-      - name: Test backend health (via nginx, same-origin)
+      - name: Test backend health (via nginx)
         run: |
           curl -fsS https://aysho.tn/api/health || exit 1
 
-      - name: Test API endpoints
+      - name: Test API endpoints (read-only)
         run: |
           curl -fsS https://aysho.tn/api/categories || exit 1
           curl -fsS https://aysho.tn/api/products || exit 1
