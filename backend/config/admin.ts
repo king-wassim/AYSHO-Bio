@@ -21,9 +21,9 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Admin => 
   // Set PUBLIC_URL=https://aysho.tn in production .env.
   url: env('PUBLIC_URL', ''),
   flags: {
-    nps: env.bool('FLAG_NPS', true),
-    promoteEE: env.bool('FLAG_PROMOTE_EE', true),
-    docLinks: env.bool('FLAG_DOC_LINKS', true),
+    nps: env.bool('FLAG_NPS', false),
+    promoteEE: env.bool('FLAG_PROMOTE_EE', false),
+    docLinks: env.bool('FLAG_DOC_LINKS', false),
   },
 });
 
