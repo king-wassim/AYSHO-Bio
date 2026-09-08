@@ -7,7 +7,7 @@ on:
 
 env:
   NODE_VERSION: '22'
-  PNPM_VERSION: '10'
+  PNPM_VERSION: '10.0.0'
   REGISTRY: ghcr.io
 
 jobs:
@@ -28,7 +28,6 @@ jobs:
         uses: actions/checkout@v4
 
       # GHCR requires lowercase image names.
-      # github.repository_owner may contain uppercase letters.
       - name: Compute lowercase owner and image tag
         id: set-tag
         shell: bash

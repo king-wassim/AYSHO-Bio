@@ -8,7 +8,7 @@ on:
 
 env:
   NODE_VERSION: '22'
-  PNPM_VERSION: '10'
+  PNPM_VERSION: '10.0.0'
 
 jobs:
   # ==========================================
@@ -21,8 +21,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # pnpm must be installed before setup-node so the cache key resolves.
-      # run_install: false → we install manually per workspace.
+      # Install pnpm first. Version is pinned here only — no packageManager
+      # field in root package.json to avoid "multiple versions" warning.
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -95,8 +95,8 @@ jobs:
 
       - name: Run frontend tests (vitest)
         working-directory: ./frontend
-        # --passWithNoTests: vitest returns exit 0 when no test files exist yet.
-        # Remove this flag once test files are added.
+        # --passWithNoTests: exit 0 when no test files exist yet.
+        # Remove once test files are added to the project.
         run: pnpm run test -- --passWithNoTests
 
   # ==========================================
@@ -112,8 +112,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Pin to commit SHA (57a97c7e) = safe v0.35.0 post-compromise.
+      # The March 2026 supply chain incident (GHSA-69fq-xp46-6x23) force-pushed
+      # 76 of 77 version tags; only 0.35.0 / this SHA was confirmed safe.
       - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@57a97c7e440ef463bc38c3c41eb2c3a52d5e42f8
         with:
           scan-type: fs
           scan-ref: .
@@ -122,8 +125,9 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
 
+      # CodeQL v4 — v3 deprecated as of Oct 2025
       - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: trivy-results.sarif
