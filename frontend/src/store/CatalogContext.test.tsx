@@ -102,6 +102,7 @@ describe('CatalogProvider', () => {
       vi.fn((input: RequestInfo | URL) =>
         Promise.resolve({
           ok: true,
+          // eslint-disable-next-line @typescript-eslint/require-await
           json: async () =>
             String(input).includes('/categories')
               ? CATEGORIES_RESPONSE

@@ -17,6 +17,9 @@ export default {
    * run jobs, or perform some special logic.
    */
   async bootstrap({ strapi }: { strapi: Core.Strapi }) {
+    // strapi.db.query returns untyped `any` — suppressions are intentional here
+    // until Strapi provides full generic types for its DB query API.
+    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
     const publicRole = await strapi.db.query('plugin::users-permissions.role').findOne({
       where: { type: 'public' },
     });
@@ -45,6 +48,7 @@ export default {
         }
       }
     }
+    /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 
     // Vérifier si des catégories existent déjà
     const categoryCount = await strapi.db.query('api::category.category').count();

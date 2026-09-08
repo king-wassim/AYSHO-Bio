@@ -1,3 +1,6 @@
+// factories.createCoreController returns `any` in Strapi v5's current type definitions.
+// The unsafe-* rules are disabled for this file until Strapi ships proper generics.
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 import { factories } from '@strapi/strapi';
 import type { Context } from 'koa';
 import { sendOrderNotification } from '../services/email';
@@ -6,18 +9,14 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
   /**
    * Override create to trigger an email notification after every new order.
    * The email is fire-and-forget (never blocks the HTTP response).
-   *
-   * Price validation via DB lookup has been removed to avoid lookup failures
-   * with Strapi v5 db.query API differences. The frontend already computes
-   * prices from the Strapi catalog, so manipulation risk is low for a COD store.
-   * A proper idempotency + price-lock mechanism can be added later.
    */
   async create(ctx: Context) {
-    // Let Strapi handle the actual database write untouched
+    // Let Strapi handle the actual database write untouched.
     const response = await super.create(ctx);
 
     // Fire email notification asynchronously (non-blocking)
-    const orderData = (response as { data?: Record<string, unknown> })?.data ?? {};
+    const orderData =
+      ((response as Record<string, unknown>)?.data as Record<string, unknown>) ?? {};
     const documentId = (orderData.documentId ?? orderData.id) as string | undefined;
 
     sendOrderNotification({ ...orderData, documentId }, strapi.log).catch((err) => {

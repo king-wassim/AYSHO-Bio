@@ -1,6 +1,6 @@
 /**
  * Route de test pour l'envoi d'email via Resend.
- * Accessible uniquement aux administrateurs authentifiés.
+ * Accessible uniquement aux administrateurs authentifiÃ©s.
  *
  * POST /api/orders/test-email
  */
