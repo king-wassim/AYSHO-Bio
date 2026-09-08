@@ -173,17 +173,8 @@ export default {
       strapi.log.info('Produits créés. Seeding terminé.');
     }
 
-    const productsWithCategories = await strapi.db
-      .query('api::product.product')
-      .findMany({ where: { category: { $notNull: true } }, select: ['documentId'] });
-
-    for (const product of productsWithCategories) {
-      if (product.documentId) {
-        await strapi.documents('api::product.product').update({
-          documentId: product.documentId,
-          data: { category: null },
-        });
-      }
-    }
+    // FIX P0 #3 — Le bloc qui effaçait toutes les relations category des produits à chaque
+    // redémarrage de Strapi a été supprimé. Ce code causait la perte de toutes les associations
+    // produit ↔ catégorie après chaque déploiement, restart Docker ou OOM.
   },
 };

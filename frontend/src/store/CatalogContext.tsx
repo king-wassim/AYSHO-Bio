@@ -172,12 +172,21 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
+    let abortController = new AbortController();
+
+    // FIX P0 #1 — fetchData ne remet plus setLoading(true) lors des refreshes de fond.
+    // setLoading(true) n'est appelé qu'à l'initialisation (quand categories est encore vide).
+    // Les polls de 30s et les refreshes sur focus mettent à jour les données en silence,
+    // sans déclencher le spinner ni démonter l'arborescence (CartProvider, Checkout, etc.).
+    const fetchData = async (isInitialLoad: boolean) => {
       try {
-        setLoading(true);
+        if (isInitialLoad) {
+          setLoading(true);
+        }
+
         const [catsRes, prodsRes] = await Promise.all([
-          fetch(joinApi('categories?populate=*')),
-          fetch(joinApi('products?populate=*')),
+          fetch(joinApi('categories?populate=*'), { signal: abortController.signal }),
+          fetch(joinApi('products?populate=*'), { signal: abortController.signal }),
         ]);
 
         if (!catsRes.ok || !prodsRes.ok) {
@@ -222,21 +231,42 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
 
         setCategories(mappedCategories);
         setProducts(mappedProducts);
+        // Effacer l'erreur si le refresh de fond réussit
+        setError(null);
       } catch (err: unknown) {
+        // Ignorer les erreurs d'annulation (abort sur unmount / navigation)
+        if (err instanceof DOMException && err.name === 'AbortError') return;
         const message = err instanceof Error ? err.message : 'Erreur inconnue';
-        setError(message);
+        // N'écraser l'erreur que si c'est le chargement initial (pas en background)
+        if (isInitialLoad) {
+          setError(message);
+        }
       } finally {
-        setLoading(false);
+        if (isInitialLoad) {
+          setLoading(false);
+        }
       }
     };
 
-    void fetchData();
+    void fetchData(true);
 
-    const refreshOnFocus = () => void fetchData();
-    const refreshTimer = window.setInterval(() => void fetchData(), 30_000);
+    // FIX P0 #1 — Les rafraîchissements de fond (poll + focus) ne passent pas isInitialLoad=true
+    // → pas de setLoading(true) → pas de démontage du panier/checkout
+    const refreshOnFocus = () => {
+      // Annuler la requête précédente en vol si elle n'est pas encore terminée
+      abortController.abort();
+      abortController = new AbortController();
+      void fetchData(false);
+    };
+    const refreshTimer = window.setInterval(() => {
+      abortController.abort();
+      abortController = new AbortController();
+      void fetchData(false);
+    }, 30_000);
     window.addEventListener('focus', refreshOnFocus);
 
     return () => {
+      abortController.abort();
       window.clearInterval(refreshTimer);
       window.removeEventListener('focus', refreshOnFocus);
     };

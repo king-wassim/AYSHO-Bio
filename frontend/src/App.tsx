@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Routes, Route, useLocation, useParams } from 'react-router-dom'
 import { CartProvider } from './store/CartContext'
-import { CatalogProvider, useCatalog } from './store/CatalogContext'
+import { useCatalog } from './store/CatalogContext'
 import { type CategoryId } from './data/catalog'
 import Header from './components/Header'
 import Hero from './components/Hero'
@@ -103,10 +103,11 @@ function AppContent() {
   return <HomePage />
 }
 
+// FIX P0 #2 — CatalogProvider supprimé de App.tsx.
+// Il était instancié à la fois dans main.tsx ET ici, créant deux providers imbriqués.
+// AppContent consommait le provider interne (celui de App.tsx) avec son propre useEffect
+// → double fetch API au démarrage, state indépendant entre les deux providers.
+// L'unique CatalogProvider dans main.tsx suffit.
 export default function App() {
-  return (
-    <CatalogProvider>
-      <AppContent />
-    </CatalogProvider>
-  )
+  return <AppContent />
 }

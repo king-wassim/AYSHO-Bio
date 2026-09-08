@@ -4,6 +4,7 @@ import {
   useState,
   useCallback,
   useMemo,
+  useEffect,
   type ReactNode,
 } from 'react'
 import type { Product } from '../data/catalog'
@@ -28,9 +29,35 @@ interface CartContextValue {
 
 const CartContext = createContext<CartContextValue | null>(null)
 
+const CART_STORAGE_KEY = 'aysho_cart'
+
+// FIX P2 #8 — Lecture initiale depuis localStorage pour survivre aux reloads
+function loadCartFromStorage(): CartItem[] {
+  try {
+    const raw = localStorage.getItem(CART_STORAGE_KEY)
+    if (!raw) return []
+    return JSON.parse(raw) as CartItem[]
+  } catch {
+    return []
+  }
+}
+
+function saveCartToStorage(items: CartItem[]): void {
+  try {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items))
+  } catch {
+    // Ignore (localStorage indisponible en navigation privée ou quota dépassé)
+  }
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([])
+  const [items, setItems] = useState<CartItem[]>(loadCartFromStorage)
   const [isOpen, setIsOpen] = useState(false)
+
+  // Synchroniser le localStorage à chaque changement du panier
+  useEffect(() => {
+    saveCartToStorage(items)
+  }, [items])
 
   const addItem = useCallback((product: Product, quantity = 1) => {
     setItems((prev) => {
@@ -66,7 +93,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     [],
   )
 
-  const clear = useCallback(() => setItems([]), [])
+  const clear = useCallback(() => {
+    setItems([])
+    // Vider aussi le localStorage après commande confirmée
+    try { localStorage.removeItem(CART_STORAGE_KEY) } catch { /* ignore */ }
+  }, [])
 
   const totalItems = useMemo(
     () => items.reduce((sum, i) => sum + i.quantity, 0),
