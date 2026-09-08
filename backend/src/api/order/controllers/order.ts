@@ -65,15 +65,29 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
 
       let product: ProductRecord | null = null;
       try {
-        const numericId = isNaN(Number(productId)) ? -1 : Number(productId);
+        // The frontend always sends item.product.id which is the Strapi documentId
+        // (set in CatalogContext: id = item.documentId ?? String(item.id)).
+        // Try documentId first; fall back to numeric id for legacy data.
         const rows = (await strapi.db.query('api::product.product').findMany({
-          where: { $or: [{ documentId: productId }, { id: numericId }] },
+          where: { documentId: productId },
           select: ['documentId', 'name', 'price'],
           limit: 1,
         })) as ProductRecord[];
-        product = rows[0] ?? null;
-      } catch {
-        // DB error handled by null check below
+
+        if (rows.length === 0 && !isNaN(Number(productId))) {
+          // Fallback: numeric id (should not happen in practice)
+          const rowsById = (await strapi.db.query('api::product.product').findMany({
+            where: { id: Number(productId) },
+            select: ['documentId', 'name', 'price'],
+            limit: 1,
+          })) as ProductRecord[];
+          product = rowsById[0] ?? null;
+        } else {
+          product = rows[0] ?? null;
+        }
+      } catch (err) {
+        strapi.log.error('[order.create] DB lookup failed for productId ' + productId + ':', err);
+        // product stays null → 400 below
       }
 
       if (!product || typeof product.price !== 'number') {
