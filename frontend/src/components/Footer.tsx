@@ -51,10 +51,8 @@ export default function Footer() {
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:gap-10 sm:py-12 md:grid-cols-4">
         <div className="md:col-span-2">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-brand-700 text-white">
-              <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 5a3 3 0 0 1 3 3v3h3a3 3 0 0 1 0 6h-3v3a3 3 0 0 1-6 0v-3H6a3 3 0 0 1 0-6h3V8a3 3 0 0 1 3-3z" />
-              </svg>
+            <div className="size-10 overflow-hidden rounded-full ring-2 ring-brand-600 shrink-0">
+              <img src="/favicon.png" alt="Logo Aysho" className="size-full object-cover" />
             </div>
             <div>
               <span className="block font-display text-2xl font-extrabold tracking-tight text-white">

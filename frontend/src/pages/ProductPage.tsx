@@ -12,6 +12,7 @@ import {
   TruckIcon,
   ChevronLeftIcon,
 } from '../components/icons'
+import ReactMarkdown from 'react-markdown'
 
 const badgeStyles: Record<string, string> = {
   Promo: 'bg-sand-400 text-brand-900',
@@ -163,9 +164,28 @@ export default function ProductPage() {
               <span className="ml-auto text-sm text-slate-400">{product.volume}</span>
             </div>
 
-            <p className="text-base leading-relaxed text-slate-600">
-              {product.description ?? product.shortDescription}
-            </p>
+            <div className="text-base leading-relaxed text-slate-600">
+              {product.description ? (
+                <ReactMarkdown
+                  components={{
+                    p: ({ node, ...props }) => <p className="mb-4 last:mb-0" {...props} />,
+                    strong: ({ node, ...props }) => <strong className="font-semibold text-slate-900" {...props} />,
+                    ul: ({ node, ...props }) => <ul className="mb-4 ml-5 list-disc space-y-1 last:mb-0" {...props} />,
+                    ol: ({ node, ...props }) => <ol className="mb-4 ml-5 list-decimal space-y-1 last:mb-0" {...props} />,
+                    li: ({ node, ...props }) => <li {...props} />,
+                    h1: ({ node, ...props }) => <h1 className="mb-4 text-2xl font-bold text-slate-900" {...props} />,
+                    h2: ({ node, ...props }) => <h2 className="mb-3 text-xl font-bold text-slate-900" {...props} />,
+                    h3: ({ node, ...props }) => <h3 className="mb-2 text-lg font-bold text-slate-900" {...props} />,
+                    a: ({ node, ...props }) => <a className="text-brand-600 hover:underline" {...props} />,
+                    br: ({ node, ...props }) => <br {...props} />,
+                  }}
+                >
+                  {product.description}
+                </ReactMarkdown>
+              ) : (
+                <p>{product.shortDescription}</p>
+              )}
+            </div>
 
             <div className="flex flex-wrap items-baseline gap-3">
               {product.oldPrice && (

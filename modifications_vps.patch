@@ -1,0 +1,1406 @@
+diff --git a/.env.example b/.env.example
+index 108e3d3..4db85b2 100644
+--- a/.env.example
++++ b/.env.example
+@@ -34,6 +34,15 @@ CLOUDINARY_FOLDER=aysho
+ SENTRY_ENABLED=false
+ SENTRY_DSN=
+ 
++# -- Resend email notifications --------------------------------------------
++# Clé API : https://resend.com/api-keys
++# RESEND_FROM : expéditeur, doit être un domaine/email vérifié dans Resend.
++#   Sans domaine perso, seul on@resend.dev est autorisé (à vérifier dans le dashboard).
++# RESEND_TO : destinataire (changez ici vers l'email de la propriété plus tard).
++RESEND_API_KEY=
++RESEND_FROM=on@resend.dev
++RESEND_TO=
++
+ # -- Rate limiting ---------------------------------------------------------
+ RATE_LIMIT_ENABLED=true
+ RATE_LIMIT_WINDOW_MS=900000
+diff --git a/backend/.env.example b/backend/.env.example
+index 2aeafea..151213d 100644
+--- a/backend/.env.example
++++ b/backend/.env.example
+@@ -74,6 +74,18 @@ RATE_LIMIT_ENABLED=true
+ RATE_LIMIT_WINDOW_MS=900000
+ RATE_LIMIT_MAX_REQUESTS=100
+ 
++# ==========================================
++# RESEND EMAIL NOTIFICATIONS
++# Notification envoyée à chaque commande.
++# Clé API : https://resend.com/api-keys
++# RESEND_FROM : expéditeur, doit être un domaine/email vérifié dans Resend.
++#   Sans domaine perso, seul on@resend.dev est autorisé (à vérifier dans le dashboard).
++# RESEND_TO : destinataire (changez ici facilement vers l'email de la propriété).
++# ==========================================
++RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxx
++RESEND_FROM=on@resend.dev
++RESEND_TO=wassimchouayakh1@gmail.com
++
+ # ==========================================
+ # LOGGING
+ # ==========================================
+diff --git a/backend/Dockerfile b/backend/Dockerfile
+index 4404e4c..7606d85 100644
+--- a/backend/Dockerfile
++++ b/backend/Dockerfile
+@@ -20,7 +20,7 @@ COPY package*.json pnpm-lock.yaml ./
+ FROM base AS builder
+ 
+ # Install all dependencies (including devDependencies)
+-RUN pnpm install --frozen-lockfile
++RUN pnpm install --no-frozen-lockfile
+ 
+ # Copy source code
+ COPY . .
+@@ -32,7 +32,7 @@ RUN pnpm run build
+ FROM base AS production-deps
+ 
+ # Install only production dependencies
+-RUN pnpm install --prod --frozen-lockfile \
++RUN pnpm install --prod --no-frozen-lockfile \
+     && pnpm store prune
+ 
+ # Stage 4: Production runtime
+@@ -46,24 +46,29 @@ WORKDIR /app
+ RUN apk add --no-cache \
+     vips \
+     curl \
+-    && addgroup -g 1000 -S nodejs \
+-    && adduser -S strapi -u 1000 -G nodejs
++    && addgroup -S strapi \
++    && adduser -S strapi -G strapi
+ 
+ # Copy production dependencies
+-COPY --from=production-deps --chown=strapi:nodejs /app/node_modules ./node_modules
++COPY --from=production-deps --chown=strapi:strapi /app/node_modules ./node_modules
+ 
+ # Copy built application
+-COPY --from=builder --chown=strapi:nodejs /app/dist ./dist
+-COPY --from=builder --chown=strapi:nodejs /app/package.json ./package.json
+-COPY --from=builder --chown=strapi:nodejs /app/config ./config
+-COPY --from=builder --chown=strapi:nodejs /app/src ./src
+-COPY --from=builder --chown=strapi:nodejs /app/public ./public
+-COPY --from=builder --chown=strapi:nodejs /app/node_modules/.pnpm ./node_modules/.pnpm
+-COPY --from=builder --chown=strapi:nodejs /app/node_modules/.modules.yaml ./node_modules/.modules.yaml
++COPY --from=builder --chown=strapi:strapi /app/dist ./dist
++COPY --from=builder --chown=strapi:strapi /app/package.json ./package.json
++COPY --from=builder --chown=strapi:strapi /app/dist/config ./config
++COPY --from=builder --chown=strapi:strapi /app/dist/src ./src
++COPY --from=builder --chown=strapi:strapi /app/public ./public
++COPY --from=builder --chown=strapi:strapi /app/node_modules/.pnpm ./node_modules/.pnpm
++COPY --from=builder --chown=strapi:strapi /app/node_modules/.modules.yaml ./node_modules/.modules.yaml
++
++# Strapi serves the generated admin entrypoint from its package runtime path.
++RUN admin_dir="$(find node_modules/.pnpm -type d -path '*/node_modules/@strapi/admin' | head -n 1)" \
++    && mkdir -p "$admin_dir/dist/server/server/build" \
++    && cp -R dist/build/. "$admin_dir/dist/server/server/build/"
+ 
+ # Create necessary directories
+-RUN mkdir -p .tmp public/uploads \
+-    && chown -R strapi:nodejs .tmp public/uploads
++RUN mkdir -p database/migrations .tmp public/uploads \
++    && chown -R strapi:strapi database .tmp public/uploads
+ 
+ # Switch to non-root user
+ USER strapi
+@@ -76,4 +81,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+     CMD node -e "require('http').get('http://localhost:1337/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
+ 
+ # Start Strapi
+-CMD ["pnpm", "start"]
+\ No newline at end of file
++CMD ["node", "node_modules/@strapi/strapi/bin/strapi.js", "start"]
+\ No newline at end of file
+diff --git a/backend/package-lock.json b/backend/package-lock.json
+index a4d142a..18656c8 100644
+--- a/backend/package-lock.json
++++ b/backend/package-lock.json
+@@ -18,6 +18,7 @@
+         "react": "^18.2.0",
+         "react-dom": "^18.2.0",
+         "react-router-dom": "^6.22.0",
++        "resend": "^6.26.0",
+         "styled-components": "^6.1.8"
+       },
+       "devDependencies": {
+@@ -4757,6 +4758,12 @@
+         "text-hex": "1.0.x"
+       }
+     },
++    "node_modules/@stablelib/base64": {
++      "version": "1.0.1",
++      "resolved": "https://registry.npmjs.org/@stablelib/base64/-/base64-1.0.1.tgz",
++      "integrity": "sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ==",
++      "license": "MIT"
++    },
+     "node_modules/@standard-schema/spec": {
+       "version": "1.1.0",
+       "resolved": "https://registry.npmjs.org/@standard-schema/spec/-/spec-1.1.0.tgz",
+@@ -11169,6 +11176,12 @@
+       "integrity": "sha512-W+KJc2dmILlPplD/H4K9l9LcAHAfPtP6BY84uVLXQ6Evcz9Lcg33Y2z1IVblT6xdY54PXYVHEv+0Wpq8Io6zkA==",
+       "license": "MIT"
+     },
++    "node_modules/fast-sha256": {
++      "version": "1.3.0",
++      "resolved": "https://registry.npmjs.org/fast-sha256/-/fast-sha256-1.3.0.tgz",
++      "integrity": "sha512-n11RGP/lrWEFI/bWdygLxhI+pVeo1ZYIVwvvPkW7azl/rOy+F3HYRZ2K5zeE9mmkhQppyv9sQFx0JM9UabnpPQ==",
++      "license": "Unlicense"
++    },
+     "node_modules/fast-uri": {
+       "version": "3.1.4",
+       "resolved": "https://registry.npmjs.org/fast-uri/-/fast-uri-3.1.4.tgz",
+@@ -16857,6 +16870,12 @@
+         "node": ">=12.0.0"
+       }
+     },
++    "node_modules/postal-mime": {
++      "version": "2.7.5",
++      "resolved": "https://registry.npmjs.org/postal-mime/-/postal-mime-2.7.5.tgz",
++      "integrity": "sha512-GNEXKvWFQnbgO5NlrGzVa0FmWzBZ24PersAWErttSg1Hjpf0ATxTwS5DOMGaOpTG6bUh5cTr7xi0jAD942wCJA==",
++      "license": "MIT-0"
++    },
+     "node_modules/postcss": {
+       "version": "8.5.23",
+       "resolved": "https://registry.npmjs.org/postcss/-/postcss-8.5.23.tgz",
+@@ -18058,6 +18077,27 @@
+       "integrity": "sha512-ab9EmR80F/zQTMNeneUr4cv+jSwPJgIlvEmVwLerwrWVbpLlBuls9XHzIeTFy4cegU2NHBp3va0LKOzU5qFEYQ==",
+       "license": "MIT"
+     },
++    "node_modules/resend": {
++      "version": "6.26.0",
++      "resolved": "https://registry.npmjs.org/resend/-/resend-6.26.0.tgz",
++      "integrity": "sha512-vkrULozV5nGF8o7tyun/t0+qFgtPpn+cyRhVqeorhOsPUNDiSc/9p/pn8AprdHqJpYaTvftpnQgWurW++FkCdw==",
++      "license": "MIT",
++      "dependencies": {
++        "postal-mime": "2.7.5",
++        "standardwebhooks": "1.0.0"
++      },
++      "engines": {
++        "node": ">=20"
++      },
++      "peerDependencies": {
++        "@react-email/render": "*"
++      },
++      "peerDependenciesMeta": {
++        "@react-email/render": {
++          "optional": true
++        }
++      }
++    },
+     "node_modules/resolve": {
+       "version": "1.22.12",
+       "resolved": "https://registry.npmjs.org/resolve/-/resolve-1.22.12.tgz",
+@@ -19105,6 +19145,16 @@
+       "integrity": "sha512-oeVtt7eWQS+Na6F//S4kJ2K2VbRlS9D43mAlMyVpVWovy9o+jfgH8O9agzANzaiLjclA0oYzUXEM4PurhSUChw==",
+       "license": "MIT"
+     },
++    "node_modules/standardwebhooks": {
++      "version": "1.0.0",
++      "resolved": "https://registry.npmjs.org/standardwebhooks/-/standardwebhooks-1.0.0.tgz",
++      "integrity": "sha512-BbHGOQK9olHPMvQNHWul6MYlrRTAOKn03rOe4A8O3CLWhNf4YHBqq2HJKKC+sfqpxiBY52pNeesD6jIiLDz8jg==",
++      "license": "MIT",
++      "dependencies": {
++        "@stablelib/base64": "^1.0.0",
++        "fast-sha256": "^1.3.0"
++      }
++    },
+     "node_modules/statuses": {
+       "version": "2.0.2",
+       "resolved": "https://registry.npmjs.org/statuses/-/statuses-2.0.2.tgz",
+diff --git a/backend/package.json b/backend/package.json
+index 6279a32..b898951 100644
+--- a/backend/package.json
++++ b/backend/package.json
+@@ -35,6 +35,7 @@
+     "react": "^18.2.0",
+     "react-dom": "^18.2.0",
+     "react-router-dom": "^6.22.0",
++    "resend": "^6.26.0",
+     "styled-components": "^6.1.8"
+   },
+   "devDependencies": {
+@@ -61,4 +62,4 @@
+     "uuid": "f6f9e0d8-3e3c-45f4-aee9-e595abcfa290",
+     "installId": "431f1c252b700954d47da1f5957ba73caa0ac732e6dc31666bdfec082e6be682"
+   }
+-}
+\ No newline at end of file
++}
+diff --git a/backend/src/api/order/content-types/order/schema.json b/backend/src/api/order/content-types/order/schema.json
+index 092a733..6c7c5fd 100644
+--- a/backend/src/api/order/content-types/order/schema.json
++++ b/backend/src/api/order/content-types/order/schema.json
+@@ -19,10 +19,17 @@
+       "type": "string",
+       "required": true
+     },
++    "customerEmail": {
++      "type": "email"
++    },
+     "customerAddress": {
+       "type": "text",
+       "required": true
+     },
++    "orderNumber": {
++      "type": "string",
++      "unique": true
++    },
+     "totalPrice": {
+       "type": "decimal"
+     },
+diff --git a/backend/src/index.ts b/backend/src/index.ts
+index 482b3ac..652d5c6 100644
+--- a/backend/src/index.ts
++++ b/backend/src/index.ts
+@@ -17,6 +17,35 @@ export default {
+    * run jobs, or perform some special logic.
+    */
+   async bootstrap({ strapi }: { strapi: Core.Strapi }) {
++    const publicRole = await strapi.db.query('plugin::users-permissions.role').findOne({
++      where: { type: 'public' },
++    });
++
++    if (publicRole) {
++      const publicActions = [
++        'api::category.category.find',
++        'api::category.category.findOne',
++        'api::product.product.find',
++        'api::product.product.findOne',
++      ];
++
++      for (const action of publicActions) {
++        const permission = await strapi.db
++          .query('plugin::users-permissions.permission')
++          .findOne({ where: { action } });
++
++        if (!permission) {
++          await strapi.db.query('plugin::users-permissions.permission').create({
++            data: { action, enabled: true, role: publicRole.id },
++          });
++        } else if (!permission.enabled) {
++          await strapi.db
++            .query('plugin::users-permissions.permission')
++            .update({ where: { id: permission.id }, data: { enabled: true } });
++        }
++      }
++    }
++
+     // Vérifier si des catégories existent déjà
+     const categoryCount = await strapi.db.query('api::category.category').count();
+ 
+@@ -143,5 +172,18 @@ export default {
+ 
+       strapi.log.info('Produits créés. Seeding terminé.');
+     }
++
++    const productsWithCategories = await strapi.db
++      .query('api::product.product')
++      .findMany({ where: { category: { $notNull: true } }, select: ['documentId'] });
++
++    for (const product of productsWithCategories) {
++      if (product.documentId) {
++        await strapi.documents('api::product.product').update({
++          documentId: product.documentId,
++          data: { category: null },
++        });
++      }
++    }
+   },
+ };
+diff --git a/backend/types/generated/contentTypes.d.ts b/backend/types/generated/contentTypes.d.ts
+index 250d2db..be3e5a8 100644
+--- a/backend/types/generated/contentTypes.d.ts
++++ b/backend/types/generated/contentTypes.d.ts
+@@ -439,12 +439,14 @@ export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
+     createdAt: Schema.Attribute.DateTime;
+     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> & Schema.Attribute.Private;
+     customerAddress: Schema.Attribute.Text & Schema.Attribute.Required;
++    customerEmail: Schema.Attribute.Email;
+     customerName: Schema.Attribute.String & Schema.Attribute.Required;
+     customerPhone: Schema.Attribute.String & Schema.Attribute.Required;
+     items: Schema.Attribute.JSON;
+     locale: Schema.Attribute.String & Schema.Attribute.Private;
+     localizations: Schema.Attribute.Relation<'oneToMany', 'api::order.order'> &
+       Schema.Attribute.Private;
++    orderNumber: Schema.Attribute.String & Schema.Attribute.Unique;
+     publishedAt: Schema.Attribute.DateTime;
+     state: Schema.Attribute.Enumeration<['pending', 'confirmed', 'delivered', 'cancelled']> &
+       Schema.Attribute.DefaultTo<'pending'>;
+diff --git a/docker-compose.production.yml b/docker-compose.production.yml
+index b124ccc..2a8c4b5 100644
+--- a/docker-compose.production.yml
++++ b/docker-compose.production.yml
+@@ -27,7 +27,7 @@ services:
+     environment:
+       AYSHO_DOMAIN: ${AYSHO_DOMAIN:-aysho.tn}
+     volumes:
+-      - ./deploy/nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf:ro
++      - ./deploy/nginx/conf.d/default.conf:/etc/nginx/nginx.conf:ro
+       - certbot-certs:/etc/letsencrypt
+       - certbot-challenges:/var/www/certbot
+     networks:
+@@ -84,6 +84,10 @@ services:
+       SENTRY_ENABLED: ${SENTRY_ENABLED:-false}
+       SENTRY_DSN: ${SENTRY_DSN:-}
+       SENTRY_ENVIRONMENT: production
++      # Resend email notifications (new order alerts)
++      RESEND_API_KEY: ${RESEND_API_KEY}
++      RESEND_FROM: ${RESEND_FROM:-on@resend.dev}
++      RESEND_TO: ${RESEND_TO}
+       # Rate limiting
+       RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+       RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}
+diff --git a/frontend/Dockerfile b/frontend/Dockerfile
+index 667833f..df00e57 100644
+--- a/frontend/Dockerfile
++++ b/frontend/Dockerfile
+@@ -10,7 +10,7 @@ WORKDIR /app
+ COPY package*.json pnpm-lock.yaml ./
+ 
+ # Install dependencies with cache
+-RUN pnpm install --frozen-lockfile --prefer-offline
++RUN pnpm install --no-frozen-lockfile --prefer-offline
+ 
+ # Copy source code
+ COPY . .
+@@ -34,7 +34,7 @@ FROM nginx:alpine AS production
+ COPY --from=builder /app/dist /usr/share/nginx/html
+ 
+ # Add health check endpoint
+-RUN echo 'server { listen 80; location /health { return 200 "healthy\n"; add_header Content-Type text/plain; } }' > /etc/nginx/conf.d/health.conf
++RUN apk add --no-cache openssl && echo 'server { listen 80; location /health { return 200 "healthy\n"; add_header Content-Type text/plain; } }' > /etc/nginx/conf.d/health.conf
+ 
+ # TLS bootstrap entrypoint (placeholder cert until certbot issues the real one)
+ COPY entrypoint.sh /docker-entrypoint.sh
+diff --git a/frontend/src/App.tsx b/frontend/src/App.tsx
+index e96ad62..b444daf 100644
+--- a/frontend/src/App.tsx
++++ b/frontend/src/App.tsx
+@@ -50,10 +50,6 @@ function HomePage() {
+     document.getElementById('catalogue')?.scrollIntoView({ behavior: 'smooth' })
+   }
+ 
+-  const handleCategorySelect = (id: string) => {
+-    window.location.href = `/categorie/${id}`
+-  }
+-
+   return (
+     <CartProvider>
+       <div className="flex min-h-screen flex-col">
+@@ -66,7 +62,7 @@ function HomePage() {
+               <>
+                 <Hero onShopNow={scrollToProducts} />
+                 <div id="catalogue">
+-                  <CategoryShowcase onSelect={handleCategorySelect} />
++                  <CategoryShowcase />
+                   <ProductGrid title="Produits en vedette" />
+                 </div>
+               </>
+diff --git a/frontend/src/components/CartDrawer.tsx b/frontend/src/components/CartDrawer.tsx
+index c123f88..fe31f0c 100644
+--- a/frontend/src/components/CartDrawer.tsx
++++ b/frontend/src/components/CartDrawer.tsx
+@@ -40,12 +40,12 @@ export default function CartDrawer({ onCheckout }: CartDrawerProps) {
+ 
+       {/* Drawer */}
+       <aside
+-        className={`fixed right-0 top-0 z-50 flex size-full max-w-md flex-col bg-sand-50 shadow-2xl transition-transform duration-300 ${
++        className={`fixed right-0 top-0 z-50 flex h-[100dvh] w-full max-w-md flex-col bg-sand-50 shadow-2xl transition-transform duration-300 ${
+           isOpen ? 'translate-x-0' : 'translate-x-full'
+         }`}
+         aria-hidden={!isOpen}
+       >
+-        <div className="flex items-center justify-between border-b border-sand-200 bg-white px-5 py-4">
++        <div className="flex items-center justify-between border-b border-sand-200 bg-white px-4 py-3 sm:px-5 sm:py-4">
+           <div className="flex items-center gap-2">
+             <CartIcon className="size-5 text-brand-700" />
+             <h2 className="font-display text-lg font-bold text-brand-900">
+@@ -146,7 +146,7 @@ export default function CartDrawer({ onCheckout }: CartDrawerProps) {
+               ))}
+             </div>
+ 
+-            <div className="border-t border-sand-200 bg-white px-5 py-4">
++            <div className="border-t border-sand-200 bg-white px-4 py-4 sm:px-5">
+               <div className="space-y-1.5 text-sm">
+                 <div className="flex justify-between text-slate-600">
+                   <span>Sous-total</span>
+diff --git a/frontend/src/components/CategoryShowcase.tsx b/frontend/src/components/CategoryShowcase.tsx
+index 4ced8a6..7307318 100644
+--- a/frontend/src/components/CategoryShowcase.tsx
++++ b/frontend/src/components/CategoryShowcase.tsx
+@@ -1,59 +1,4 @@
+-import { useCatalog } from '../store/CatalogContext'
+-import { ChevronRightIcon } from './icons'
+-import { optimizeMediaUrl } from '../lib/api'
+-
+-interface CategoryShowcaseProps {
+-  onSelect: (id: string) => void
+-}
+-
+-export default function CategoryShowcase({ onSelect }: CategoryShowcaseProps) {
+-  const { categories } = useCatalog()
+-
+-  return (
+-    <section className="mx-auto max-w-7xl px-4 py-16">
+-      <div className="mb-8 flex items-end justify-between">
+-        <div>
+-          <h2 className="font-display text-3xl font-bold text-brand-900">
+-            Nos produits
+-          </h2>
+-        </div>
+-      </div>
+-
+-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+-        {categories.map((cat, i) => (
+-          <button
+-            key={cat.id}
+-            onClick={() => onSelect(cat.id)}
+-            className={`group relative overflow-hidden rounded-2xl text-left shadow-soft ring-1 ring-sand-200 transition hover:shadow-card ${
+-              i === 0 ? 'sm:col-span-2 lg:col-span-1' : ''
+-            }`}
+-          >
+-            <div className="aspect-[4/3] overflow-hidden">
+-              <img
+-                src={optimizeMediaUrl(cat.image, { w: 800 })}
+-                alt={cat.name}
+-                className="size-full object-cover transition duration-500 group-hover:scale-105"
+-                loading="lazy"
+-                decoding="async"
+-              />
+-            </div>
+-            <div className="absolute inset-0 bg-gradient-to-t from-brand-900/85 via-brand-900/20 to-transparent" />
+-            <div className="absolute inset-x-0 bottom-0 p-5 text-white">
+-              <p className="text-xs font-medium uppercase tracking-wider text-brand-100">
+-                {cat.tagline}
+-              </p>
+-              <h3 className="mt-1 font-display text-xl font-bold">{cat.name}</h3>
+-              <p className="mt-1 hidden text-sm text-brand-50/90 sm:block">
+-                {cat.description}
+-              </p>
+-              <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-white">
+-                Explorer
+-                <ChevronRightIcon className="size-4 transition group-hover:translate-x-1" />
+-              </span>
+-            </div>
+-          </button>
+-        ))}
+-      </div>
+-    </section>
+-  )
++export default function CategoryShowcase() {
++  // Section masquée temporairement : ne rend rien à l'écran.
++  return null
+ }
+diff --git a/frontend/src/components/Checkout.tsx b/frontend/src/components/Checkout.tsx
+index d555af6..607b3d9 100644
+--- a/frontend/src/components/Checkout.tsx
++++ b/frontend/src/components/Checkout.tsx
+@@ -50,6 +50,7 @@ const { items, totalPrice, clear } = useCart()
+   const [submitted, setSubmitted] = useState(false)
+   const [isSubmitting, setIsSubmitting] = useState(false)
+   const [orderId, setOrderId] = useState('')
++  const [confirmedTotal, setConfirmedTotal] = useState(0)
+ 
+   const grandTotal = totalPrice
+ 
+@@ -83,6 +84,7 @@ const { items, totalPrice, clear } = useCart()
+         data: {
+           customerName: `${form.firstName} ${form.lastName}`,
+           customerPhone: form.phone,
++          customerEmail: form.email,
+           customerAddress: `${form.address}, ${form.city}, ${form.governorate} - Notes: ${form.notes}`,
+           totalPrice: grandTotal,
+           state: 'pending',
+@@ -113,8 +115,16 @@ const { items, totalPrice, clear } = useCart()
+       const resData = (await res.json()) as OrderResponse;
+ 
+       const rawId = resData.data.documentId ?? String(resData.data.id ?? '');
+-      const id = 'AYSHO-' + rawId.slice(-6).toUpperCase()
++
++      let id: string;
++      if (resData.data.id !== undefined && resData.data.id !== null) {
++        id = 'AYSHO-' + String(resData.data.id).padStart(6, '0')
++      } else {
++        id = 'AYSHO-' + rawId.toUpperCase()
++      }
++
+       setOrderId(id)
++      setConfirmedTotal(grandTotal)
+       setSubmitted(true)
+       clear()
+     } catch (err) {
+@@ -151,7 +161,7 @@ const { items, totalPrice, clear } = useCart()
+               <div className="mt-2 flex justify-between text-sm">
+                 <span className="text-slate-500">Montant à payer</span>
+                 <span className="font-display font-bold text-brand-800">
+-                  {formatPrice(grandTotal)} DT
++                  {formatPrice(confirmedTotal)} DT
+                 </span>
+               </div>
+               <div className="mt-2 flex justify-between text-sm">
+@@ -196,8 +206,8 @@ const { items, totalPrice, clear } = useCart()
+ 
+   return (
+     <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-brand-900/50 p-4 backdrop-blur-sm sm:items-center">
+-      <div className="my-4 w-full max-w-2xl animate-fade-up overflow-hidden rounded-2xl bg-white shadow-2xl">
+-        <div className="flex items-center justify-between border-b border-sand-200 bg-white px-6 py-4">
++      <div className="my-2 w-full max-w-2xl animate-fade-up overflow-hidden rounded-2xl bg-white shadow-2xl sm:my-4">
++      <div className="flex items-center justify-between border-b border-sand-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
+           <div>
+             <h2 className="font-display text-xl font-bold text-brand-900">
+               Finaliser la commande
+@@ -216,7 +226,7 @@ const { items, totalPrice, clear } = useCart()
+         </div>
+ 
+         <form onSubmit={(e) => { void handleSubmit(e); }} className="max-h-[75vh] overflow-y-auto">
+-          <div className="grid gap-6 p-6 md:grid-cols-5">
++          <div className="grid gap-5 p-4 sm:p-6 md:grid-cols-5">
+             {/* Coordinates */}
+             <div className="space-y-4 md:col-span-3">
+               <div>
+@@ -228,7 +238,7 @@ const { items, totalPrice, clear } = useCart()
+                 </p>
+               </div>
+ 
+-              <div className="grid grid-cols-2 gap-3">
++              <div className="grid gap-3 sm:grid-cols-2">
+                 <Field
+                   label="Prénom"
+                   required
+@@ -273,7 +283,7 @@ const { items, totalPrice, clear } = useCart()
+                 error={errors.address}
+               />
+ 
+-              <div className="grid grid-cols-2 gap-3">
++              <div className="grid gap-3 sm:grid-cols-2">
+                 <Field
+                   label="Ville"
+                   required
+@@ -366,7 +376,7 @@ const { items, totalPrice, clear } = useCart()
+             </div>
+           </div>
+ 
+-          <div className="border-t border-sand-200 bg-sand-50 px-6 py-4">
++          <div className="border-t border-sand-200 bg-sand-50 px-4 py-4 sm:px-6">
+             <button
+               type="submit"
+               disabled={items.length === 0 || isSubmitting}
+diff --git a/frontend/src/components/Footer.tsx b/frontend/src/components/Footer.tsx
+index e91b59e..2c35725 100644
+--- a/frontend/src/components/Footer.tsx
++++ b/frontend/src/components/Footer.tsx
+@@ -1,4 +1,13 @@
+-import { TruckIcon, BanknoteIcon, ShieldIcon, PhoneIcon } from './icons'
++import {
++  TruckIcon,
++  BanknoteIcon,
++  ShieldIcon,
++  PhoneIcon,
++  MailIcon,
++  FacebookIcon,
++  InstagramIcon,
++  TikTokIcon,
++} from './icons'
+ 
+ const reassurance = [
+   { icon: BanknoteIcon, title: 'Paiement à la livraison', text: 'Payez en espèces au livreur, en toute confiance.' },
+@@ -7,12 +16,19 @@ const reassurance = [
+ 
+ ]
+ 
++const contactLinks = [
++  { label: 'contact@aysho.tn', href: 'mailto:contact@aysho.tn', icon: MailIcon },
++  { label: 'aysho.tn', href: 'https://www.facebook.com/share/1EGenJG1rd/', icon: FacebookIcon },
++  { label: 'aysho.tn', href: 'https://www.instagram.com/aysho.tn?igsi=ZmJ4NGlpcnl5azNv', icon: InstagramIcon },
++  { label: 'aysho.tn', href: 'https://tiktok.com/@aysho.tn', icon: TikTokIcon },
++]
++
+ export default function Footer() {
+   return (
+     <footer className="mt-8 bg-brand-900 text-brand-50">
+       {/* Reassurance strip */}
+       <div className="border-b border-brand-800">
+-        <div className="mx-auto grid max-w-7xl gap-6 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
++        <div className="mx-auto grid max-w-7xl gap-5 px-4 py-8 sm:grid-cols-2 sm:gap-6 sm:py-10 lg:grid-cols-4">
+           {reassurance.map((r) => (
+             <div key={r.title} className="flex items-start gap-3">
+               <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-800 text-brand-200">
+@@ -32,7 +48,7 @@ export default function Footer() {
+       </div>
+ 
+       {/* Main footer */}
+-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 md:grid-cols-4">
++      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:gap-10 sm:py-12 md:grid-cols-4">
+         <div className="md:col-span-2">
+           <div className="flex items-center gap-2.5">
+             <div className="flex size-10 items-center justify-center rounded-xl bg-brand-700 text-white">
+@@ -51,16 +67,36 @@ export default function Footer() {
+           </p>
+           <div className="mt-4 flex items-center gap-2 text-sm text-brand-200">
+             <PhoneIcon className="size-4" />
+-            <span>+216 92 901 310</span>
++            <span>92 901 310</span>
++          </div>
++        </div>
++
++        <div className="md:col-span-2">
++          <h3 className="font-display text-sm font-bold uppercase tracking-wide text-white">
++            Contactez-nous
++          </h3>
++          <div className="mt-4 grid gap-3 sm:grid-cols-2">
++            {contactLinks.map(({ label, href, icon: Icon }) => (
++              <a
++                key={href}
++                href={href}
++                target={href.startsWith('http') ? '_blank' : undefined}
++                rel={href.startsWith('http') ? 'noreferrer' : undefined}
++                className="flex min-w-0 items-center gap-3 rounded-lg px-2 py-2 text-sm text-brand-200 transition hover:bg-brand-800 hover:text-white"
++              >
++                <Icon className="size-5 shrink-0" />
++                <span className="truncate">{label}</span>
++              </a>
++            ))}
+           </div>
+         </div>
+ 
+       </div>
+ 
+       <div className="border-t border-brand-800">
+-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-5 text-xs text-brand-300 sm:flex-row">
++        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-5 text-center text-xs text-brand-300 sm:flex-row sm:text-left">
+           <p>© {new Date().getFullYear()} Aysho — Tous droits réservés.</p>
+-          <p>Livraison à domicile · Paiement à la livraison · Tunisie</p>
++          <p className="max-w-full">Livraison à domicile · Paiement à la livraison · Tunisie</p>
+         </div>
+       </div>
+     </footer>
+diff --git a/frontend/src/components/Header.tsx b/frontend/src/components/Header.tsx
+index 79a752f..156afcc 100644
+--- a/frontend/src/components/Header.tsx
++++ b/frontend/src/components/Header.tsx
+@@ -31,16 +31,16 @@ export default function Header() {
+ return (
+     <header className="sticky top-0 z-40">
+       {/* Top bar */}
+-      <div className="bg-brand-800 text-xl font-semibold text-brand-50 sm:text-2xl">
+-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:py-4">
+-          <span className="flex items-center gap-3">
+-            <TruckIcon className="size-6 shrink-0 sm:size-7" />
+-            <span className="hidden sm:inline">Livraison à domicile <span className="font-bold">gratuite</span> partout en Tunisie</span>
+-            <span className="sm:hidden">Livraison <span className="font-bold">gratuite</span> en Tunisie</span>
++      <div className="bg-brand-800 text-xs font-semibold text-brand-50 sm:text-base">
++        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-2.5 sm:px-4 sm:py-3">
++          <span className="flex min-w-0 items-center gap-2">
++            <TruckIcon className="size-4 shrink-0 sm:size-5" />
++            <span className="truncate sm:hidden">Livraison gratuite en toute la Tunisie</span>
++            <span className="hidden truncate sm:inline">Livraison à domicile gratuite en toute la Tunisie</span>
+           </span>
+-          <span className="flex shrink-0 items-center gap-3">
+-            <PhoneIcon className="size-6 sm:size-7" />
+-            +216 92 901 310
++          <span className="flex shrink-0 items-center gap-1.5 text-[11px] sm:gap-2 sm:text-sm">
++            <PhoneIcon className="size-4 sm:size-5" />
++            92 901 310
+           </span>
+         </div>
+       </div>
+@@ -48,19 +48,19 @@ return (
+       {/* Main bar */}
+       <div className="border-b border-sand-200 bg-white/95 shadow-sm backdrop-blur">
+         {/* Logo + nav + search + panier */}
+-        <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3">
++        <div className="mx-auto flex max-w-7xl items-center gap-2 px-3 py-2.5 sm:gap-4 sm:px-4 sm:py-3">
+ 
+           {/* Gauche : Logo + "Tous les produits" desktop */}
+-          <div className="flex shrink-0 items-center gap-5">
+-            <button onClick={goHome} className="flex items-center gap-2.5">
+-              <span className="flex size-10 items-center justify-center overflow-hidden rounded-2xl bg-white ring-1 ring-sand-200 shadow-soft">
++          <div className="flex min-w-0 shrink-0 items-center gap-3 sm:gap-5">
++            <button onClick={goHome} className="flex min-w-0 items-center gap-2.5">
++              <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white ring-1 ring-sand-200 shadow-soft sm:size-10">
+                 <img
+                   src="/LOGO.jpg"
+                   alt="Logo Aysho"
+                   className="size-full object-cover"
+                 />
+               </span>
+-              <span className="font-display text-3xl font-extrabold tracking-tight text-brand-800 sm:text-4xl">
++              <span className="font-display text-2xl font-extrabold tracking-tight text-brand-800 sm:text-4xl">
+                 Aysho
+               </span>
+             </button>
+@@ -110,7 +110,7 @@ return (
+         </div>
+ 
+         {/* SearchBar mobile — toujours visible sous la barre principale */}
+-        <div className="border-t border-sand-100 px-4 py-2.5 lg:hidden">
++        <div className="border-t border-sand-100 px-3 py-2.5 sm:px-4 lg:hidden">
+           <SearchBar fullWidth />
+         </div>
+ 
+diff --git a/frontend/src/components/Hero.tsx b/frontend/src/components/Hero.tsx
+index 7261b8d..14a892a 100644
+--- a/frontend/src/components/Hero.tsx
++++ b/frontend/src/components/Hero.tsx
+@@ -20,37 +20,37 @@ export default function Hero({ onShopNow }: HeroProps) {
+         <div className="absolute -right-24 bottom-0 size-96 rounded-full bg-sand-200 blur-3xl" />
+       </div>
+ 
+-      <div className="relative mx-auto grid max-w-7xl items-center gap-8 px-4 py-10 sm:py-16 lg:grid-cols-2 lg:py-24">
++      <div className="relative mx-auto grid max-w-7xl items-center gap-6 px-4 py-8 sm:gap-8 sm:py-16 lg:grid-cols-2 lg:py-24">
+         {/* Texte */}
+         <div className="text-center sm:text-left">
+-          <h1 className="mt-5 font-display text-4xl font-extrabold leading-tight tracking-tight text-brand-900 sm:text-6xl lg:text-6xl">
++          <h1 className="mt-2 font-display text-3xl font-extrabold leading-tight tracking-tight text-brand-900 sm:mt-5 sm:text-6xl lg:text-6xl">
+             Votre santé {' '}
+             <br />
+             <span className="text-brand-600"> notre propriété.</span>
+           </h1>
+ 
+-          <p className="mx-auto mt-7 max-w-2xl text-xl leading-relaxed text-slate-600 sm:mx-0 sm:text-2xl">
++          <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-slate-600 sm:mt-7 sm:mx-0 sm:text-2xl">
+             Aysho est une boutique de vente en ligne de produits alimentaires & cosmétiques 100% naturels.
+           </p>
+ 
+           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+             <button
+               onClick={onShopNow}
+-              className="w-full rounded-xl bg-brand-700 px-9 py-5 text-lg font-bold text-white shadow-card transition hover:bg-brand-800 hover:shadow-lg sm:w-auto sm:text-xl"
++              className="w-full rounded-xl bg-brand-700 px-6 py-4 text-base font-bold text-white shadow-card transition hover:bg-brand-800 hover:shadow-lg sm:w-auto sm:px-9 sm:py-5 sm:text-xl"
+             >
+               Nos produits
+             </button>
+           </div>
+ 
+           {/* Features */}
+-          <div className="mt-9 grid grid-cols-1 gap-4 sm:grid-cols-3">
++          <div className="mt-7 grid grid-cols-3 gap-2 sm:mt-9 sm:gap-4">
+             {features.map((f) => (
+               <div
+                 key={f.label}
+-                className="flex min-h-28 flex-col items-center gap-3 rounded-xl border border-sand-200 bg-white/70 p-5 text-center backdrop-blur sm:items-start sm:text-left"
++                className="flex min-h-24 flex-col items-center gap-2 rounded-xl border border-sand-200 bg-white/70 p-2.5 text-center backdrop-blur sm:min-h-28 sm:items-start sm:gap-3 sm:p-5 sm:text-left"
+               >
+-                <f.icon className="size-7 text-brand-600" />
+-                <span className="text-base font-semibold leading-tight text-slate-700 sm:text-lg">
++                <f.icon className="size-5 text-brand-600 sm:size-7" />
++                <span className="text-[11px] font-semibold leading-tight text-slate-700 sm:text-lg">
+                   {f.label}
+                 </span>
+               </div>
+@@ -58,9 +58,9 @@ export default function Hero({ onShopNow }: HeroProps) {
+           </div>
+         </div>
+ 
+-        {/* Image — masquée sur mobile, visible à partir de lg */}
+-        <div className="relative hidden lg:block">
+-          <div className="relative mx-auto aspect-square max-w-md overflow-hidden rounded-[2rem] bg-white p-3 shadow-card ring-1 ring-sand-200">
++        {/* Image responsive : taille moyenne sur mobile, format desktop préservé */}
++        <div className="relative order-first lg:order-none">
++          <div className="relative mx-auto aspect-square w-full max-w-32 overflow-hidden rounded-[2rem] bg-white p-2 shadow-card ring-1 ring-sand-200 sm:max-w-xs sm:p-3 lg:max-w-md">
+             <img
+               src="/LOGO.jpg"
+               alt="Logo AYSHO"
+diff --git a/frontend/src/components/ProductCard.tsx b/frontend/src/components/ProductCard.tsx
+index 8e48f71..95cdafd 100644
+--- a/frontend/src/components/ProductCard.tsx
++++ b/frontend/src/components/ProductCard.tsx
+@@ -30,13 +30,13 @@ export default function ProductCard({ product }: { product: Product }) {
+   return (
+     <article
+       onClick={handleCardClick}
+-      className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-soft transition hover:-translate-y-1 hover:shadow-card"
++      className="group flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-soft transition hover:-translate-y-1 hover:shadow-card"
+     >
+       <div className="relative aspect-square overflow-hidden bg-sand-50">
+         <img
+-          src={optimizeMediaUrl(product.image, { w: 500 })}
++          src={optimizeMediaUrl(product.image, { w: 1000 })}
+           alt={product.name}
+-          className="size-full object-cover transition duration-500 group-hover:scale-105"
++          className="size-full max-w-full object-contain p-2 transition duration-500 group-hover:scale-[1.02] sm:p-3"
+           loading="lazy"
+           decoding="async"
+         />
+@@ -61,14 +61,14 @@ export default function ProductCard({ product }: { product: Product }) {
+         )}
+       </div>
+ 
+-      <div className="flex flex-1 flex-col p-4">
+-        <p className="text-xs font-medium uppercase tracking-wide text-sand-500">
++      <div className="flex flex-1 flex-col p-2.5 sm:p-4">
++        <p className="text-xs font-medium tracking-wide text-sand-500">
+           {product.brand}
+         </p>
+-        <h3 className="mt-1 font-display text-base font-semibold leading-snug text-slate-800">
++        <h3 className="mt-1 break-words font-display text-sm font-semibold leading-snug text-slate-800 sm:text-base">
+           {product.name}
+         </h3>
+-        <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-slate-500">
++        <p className="mt-1.5 line-clamp-2 text-[11px] leading-relaxed text-slate-500 sm:text-xs">
+           {product.shortDescription}
+         </p>
+ 
+@@ -78,7 +78,7 @@ export default function ProductCard({ product }: { product: Product }) {
+             {product.rating.toFixed(1)}
+           </span>
+           <span className="text-xs text-slate-400">({product.reviews})</span>
+-          <span className="ml-auto text-xs text-slate-400">{product.volume}</span>
++          <span className="ml-auto max-w-[45%] truncate text-[10px] text-slate-400 sm:text-xs">{product.volume}</span>
+         </div>
+ 
+         <div className="mt-3 flex items-end justify-between">
+@@ -88,7 +88,7 @@ export default function ProductCard({ product }: { product: Product }) {
+                 {formatPrice(product.oldPrice)} DT
+               </span>
+             )}
+-            <span className="font-display text-lg font-bold text-brand-800">
++            <span className="font-display text-base font-bold text-brand-800 sm:text-lg">
+               {formatPrice(product.price)}{' '}
+               <span className="text-sm font-semibold">DT</span>
+             </span>
+diff --git a/frontend/src/components/ProductGrid.tsx b/frontend/src/components/ProductGrid.tsx
+index 31085c6..6efc699 100644
+--- a/frontend/src/components/ProductGrid.tsx
++++ b/frontend/src/components/ProductGrid.tsx
+@@ -41,10 +41,10 @@ export default function ProductGrid({
+   }, [categoryFilter, products, sort])
+ 
+   return (
+-    <section className="mx-auto max-w-7xl px-4 py-12">
++    <section className="mx-auto max-w-7xl px-3 py-8 sm:px-4 sm:py-12">
+       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+         <div>
+-          <h2 className="font-display text-3xl font-bold text-brand-900">
++          <h2 className="font-display text-2xl font-bold text-brand-900 sm:text-3xl">
+             {title}
+           </h2>
+           <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+@@ -77,7 +77,7 @@ export default function ProductGrid({
+           </p>
+         </div>
+       ) : (
+-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
++        <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
+           {filtered.map((product) => (
+             <ProductCard key={product.id} product={product} />
+           ))}
+diff --git a/frontend/src/components/icons.tsx b/frontend/src/components/icons.tsx
+index 581378a..a45c8ec 100644
+--- a/frontend/src/components/icons.tsx
++++ b/frontend/src/components/icons.tsx
+@@ -95,6 +95,34 @@ export const PhoneIcon = (props: IconProps) => (
+   </svg>
+ )
+ 
++export const MailIcon = (props: IconProps) => (
++  <svg {...base(props)}>
++    <rect x="3" y="5" width="18" height="14" rx="2" />
++    <path d="m3 7 9 6 9-6" />
++  </svg>
++)
++
++export const FacebookIcon = (props: IconProps) => (
++  <svg {...base(props)} fill="currentColor" stroke="none">
++    <path d="M14 8h3V4h-3c-3.31 0-5 1.69-5 5v3H6v4h3v8h4v-8h3.2l.8-4H13V9c0-.67.33-1 1-1Z" />
++  </svg>
++)
++
++export const InstagramIcon = (props: IconProps) => (
++  <svg {...base(props)}>
++    <rect x="3" y="3" width="18" height="18" rx="5" />
++    <circle cx="12" cy="12" r="4" />
++    <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
++  </svg>
++)
++
++export const TikTokIcon = (props: IconProps) => (
++  <svg {...base(props)}>
++    <path d="M15 3v11a4 4 0 1 1-4-4" />
++    <path d="M15 3c.7 2.5 2.2 4 5 4" />
++  </svg>
++)
++
+ export const CheckIcon = (props: IconProps) => (
+   <svg {...base(props)}>
+     <path d="M20 6 9 17l-5-5" />
+diff --git a/frontend/src/index.css b/frontend/src/index.css
+index e5a76c4..ead549f 100644
+--- a/frontend/src/index.css
++++ b/frontend/src/index.css
+@@ -8,12 +8,22 @@
+   }
+   body {
+     @apply font-sans bg-sand-50 text-slate-800 antialiased;
++    min-width: 0;
+   }
+   h1, h2, h3, h4 {
+     @apply font-display;
+   }
+ }
+ 
++@layer components {
++  button,
++  input,
++  select,
++  textarea {
++    touch-action: manipulation;
++  }
++}
++
+ @layer utilities {
+   .no-scrollbar::-webkit-scrollbar {
+     display: none;
+diff --git a/frontend/src/pages/ProductPage.tsx b/frontend/src/pages/ProductPage.tsx
+index 3bdc5f4..be535b3 100644
+--- a/frontend/src/pages/ProductPage.tsx
++++ b/frontend/src/pages/ProductPage.tsx
+@@ -68,8 +68,8 @@ export default function ProductPage() {
+ 
+   return (
+     <div className="min-h-screen bg-sand-50">
+-      <div className="mx-auto max-w-7xl px-4 py-8">
+-        <nav className="mb-6 flex items-center gap-2 text-sm text-slate-500" aria-label="Fil d'Ariane">
++      <div className="mx-auto max-w-7xl px-3 py-5 sm:px-4 sm:py-8">
++        <nav className="mb-5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 sm:mb-6 sm:gap-2 sm:text-sm" aria-label="Fil d'Ariane">
+           <button
+             onClick={() => navigate('/')}
+             className="flex items-center gap-1.5 hover:text-brand-700"
+@@ -89,17 +89,16 @@ export default function ProductPage() {
+             </>
+           )}
+           <span>/</span>
+-          <span className="text-slate-700 truncate max-w-[200px]">{product.name}</span>
++          <span className="max-w-[calc(100vw-6rem)] truncate text-slate-700 sm:max-w-[200px]">{product.name}</span>
+         </nav>
+ 
+         <div className="gap-8 animate-fade-up lg:grid lg:grid-cols-2 lg:gap-12">
+           <div className="space-y-4">
+             <div className="relative aspect-square overflow-hidden rounded-2xl bg-sand-50">
+               <img
+-                src={optimizeMediaUrl(mainImage, { w: 1200 })}
++                src={optimizeMediaUrl(mainImage, { w: 1600 })}
+                 alt={product.name}
+-                className="size-full object-cover transition-opacity duration-300"
+-                fetchPriority="high"
++                className="size-full object-contain p-4 transition-opacity duration-300"
+               />
+               {product.badges && product.badges.length > 0 && (
+                 <div className="absolute left-4 top-4 flex flex-col gap-2">
+@@ -128,7 +127,7 @@ export default function ProductPage() {
+                   <button
+                     key={img}
+                     onClick={() => setSelectedImageIndex(idx)}
+-                    className={`flex-shrink-0 h-20 w-20 overflow-hidden rounded-xl border-2 transition ${
++                    className={`h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border-2 transition sm:h-20 sm:w-20 ${
+                       idx === selectedImageIndex
+                         ? 'border-brand-600 ring-2 ring-brand-200'
+                         : 'border-transparent hover:border-brand-300'
+@@ -139,7 +138,7 @@ export default function ProductPage() {
+                     <img
+                       src={optimizeMediaUrl(img, { w: 180 })}
+                       alt={`Vue ${idx + 1} de ${product.name}`}
+-                      className="size-full object-cover"
++                      className="size-full object-contain p-1"
+                       loading="lazy"
+                       decoding="async"
+                     />
+@@ -153,7 +152,7 @@ export default function ProductPage() {
+             <p className="text-xs font-medium uppercase tracking-wide text-sand-500">
+               {product.brand}
+             </p>
+-            <h1 className="font-display text-3xl font-bold leading-snug text-brand-900">
++            <h1 className="font-display text-2xl font-bold leading-snug text-brand-900 sm:text-3xl">
+               {product.name}
+             </h1>
+ 
+@@ -174,7 +173,7 @@ export default function ProductPage() {
+                   {formatPrice(product.oldPrice)} DT
+                 </span>
+               )}
+-              <span className="font-display text-4xl font-bold text-brand-800">
++              <span className="font-display text-3xl font-bold text-brand-800 sm:text-4xl">
+                 {formatPrice(product.price)} DT
+               </span>
+             </div>
+@@ -204,7 +203,7 @@ export default function ProductPage() {
+               <CartIcon className="size-5" />
+               Ajouter au panier
+             </button>
+-            <div className="flex items-center gap-3 rounded-xl bg-emerald-50 px-6 py-4 text-base font-semibold text-emerald-800">
++            <div className="flex items-center gap-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 sm:px-6 sm:py-4 sm:text-base">
+               <TruckIcon className="size-6 shrink-0" />
+               Livraison gratuite partout en Tunisie
+             </div>
+diff --git a/frontend/src/store/CatalogContext.test.tsx b/frontend/src/store/CatalogContext.test.tsx
+index 0d4381e..3c72186 100644
+--- a/frontend/src/store/CatalogContext.test.tsx
++++ b/frontend/src/store/CatalogContext.test.tsx
+@@ -62,6 +62,12 @@ const PRODUCTS_RESPONSE = {
+         image: { attributes: { url: 'creme.jpg' } },
+       },
+     },
++    {
++      id: 3,
++      name: 'Magnésium marin',
++      category: { data: [{ slug: 'complements-alimentaires' }] },
++      image: { url: 'magnesium.jpg' },
++    },
+   ],
+ }
+ 
+@@ -142,6 +148,10 @@ describe('CatalogProvider', () => {
+     const prodCreme = screen.getByTestId('prod-2')
+     expect(prodCreme).toHaveTextContent('Crème réparatrice')
+     expect(prodCreme).toHaveTextContent('corps')
++
++    const prodMagnesium = screen.getByTestId('prod-3')
++    expect(prodMagnesium).toHaveTextContent('Magnésium marin')
++    expect(prodMagnesium).toHaveTextContent('complements-alimentaires')
+   })
+ 
+   it('surfaces fetch errors through the error state', async () => {
+diff --git a/frontend/src/store/CatalogContext.tsx b/frontend/src/store/CatalogContext.tsx
+index 08bac04..bb555d7 100644
+--- a/frontend/src/store/CatalogContext.tsx
++++ b/frontend/src/store/CatalogContext.tsx
+@@ -47,7 +47,9 @@ interface StrapiProductAttrs {
+   reviews?: number;
+   category?: {
+     slug?: string;
+-    data?: { attributes?: { slug?: string } };
++    data?:
++      | { slug?: string; attributes?: { slug?: string } }
++      | Array<{ slug?: string; attributes?: { slug?: string } }>;
+   };
+   images?: StrapiMedia | StrapiMedia[];
+   image?: StrapiMedia;
+@@ -70,7 +72,9 @@ interface StrapiProductItem {
+   reviews?: number;
+   category?: {
+     slug?: string;
+-    data?: { attributes?: { slug?: string } };
++    data?:
++      | { slug?: string; attributes?: { slug?: string } }
++      | Array<{ slug?: string; attributes?: { slug?: string } }>;
+   };
+   images?: StrapiMedia | StrapiMedia[];
+   image?: StrapiMedia;
+@@ -134,6 +138,18 @@ function getMediaUrls(media: StrapiMedia | StrapiMedia[] | undefined): string[]
+   return urls;
+ }
+ 
++function getCategorySlug(category: StrapiProductAttrs['category']): string {
++  if (!category) return '';
++
++  const relatedCategory = Array.isArray(category.data) ? category.data[0] : category.data;
++  return (
++    category.slug ??
++    relatedCategory?.slug ??
++    relatedCategory?.attributes?.slug ??
++    ''
++  );
++}
++
+ // ── Context ──────────────────────────────────────────────────────────────────
+ 
+ interface CatalogContextType {
+@@ -182,8 +198,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
+ 
+         const mappedProducts: Product[] = prodsData.data.map((item) => {
+           const attrs = item.attributes ?? item;
+-          const catSlug =
+-            attrs.category?.slug ?? attrs.category?.data?.attributes?.slug ?? '';
++          const catSlug = getCategorySlug(attrs.category);
+           const gallery = getMediaUrls(attrs.images ?? attrs.image);
+           return {
+             id: item.documentId ?? String(item.id ?? ''),
+
+
+=== NOUVEAU FICHIER: lifecycles.ts ===
+
+import type { Core } from '@strapi/strapi';
+import { sendOrderNotification } from '../../services/email';
+
+interface OrderResult {
+  documentId?: string;
+  id?: number | string;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  customerAddress?: string;
+  orderNumber?: string;
+  totalPrice?: number;
+  state?: string;
+  items?: Array<{ name?: string; quantity?: number; price?: number }>;
+}
+
+interface AfterCreateEvent {
+  result: OrderResult;
+}
+
+function buildOrderNumber(id: number | string | undefined): string | undefined {
+  if (id === undefined || id === null) return undefined;
+  return 'AYSHO-' + String(id).padStart(6, '0');
+}
+
+export default {
+  async afterCreate(event: AfterCreateEvent, strapi: Core.Strapi) {
+    const order = event?.result;
+    if (!order) return;
+
+    const orderNumber = buildOrderNumber(order.id);
+
+    if (orderNumber && !order.orderNumber && order.documentId) {
+      try {
+        await strapi.documents('api::order.order').update({
+          documentId: order.documentId,
+          data: { orderNumber },
+        });
+      } catch (err) {
+        strapi?.log?.error?.('[order] Échec génération orderNumber :', err);
+      }
+    }
+
+    const payload = {
+      documentId: order.documentId,
+      id: order.id,
+      orderNumber,
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
+      customerEmail: order.customerEmail,
+      customerAddress: order.customerAddress,
+      totalPrice: order.totalPrice,
+      state: order.state,
+      items: order.items,
+    };
+
+    await sendOrderNotification(payload, strapi?.log);
+  },
+};
+
+
+=== NOUVEAU FICHIER: email.ts ===
+
+import { Resend } from 'resend';
+
+interface OrderItem {
+  name?: string;
+  quantity?: number;
+  price?: number;
+}
+
+interface OrderData {
+  documentId?: string;
+  id?: number | string;
+  orderNumber?: string;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  customerAddress?: string;
+  totalPrice?: number;
+  state?: string;
+  items?: OrderItem[];
+}
+
+interface EmailConfig {
+  apiKey?: string;
+  from: string;
+  to?: string;
+}
+
+function readConfig(): EmailConfig {
+  return {
+    apiKey: process.env.RESEND_API_KEY,
+    from: process.env.RESEND_FROM || 'on@resend.dev',
+    to: process.env.RESEND_TO,
+  };
+}
+
+function formatPrice(value: number | undefined): string {
+  const n = Number(value);
+  if (Number.isNaN(n)) return '0';
+  return new Intl.NumberFormat('fr-TN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 3,
+  }).format(n);
+}
+
+function buildOrderList(items: OrderItem[] | undefined): string {
+  if (!Array.isArray(items) || items.length === 0) {
+    return '<p>Aucun article</p>';
+  }
+
+  const rows = items
+    .map((item) => {
+      const name = escapeHtml(item?.name || 'Article');
+      const qty = Number(item?.quantity) || 1;
+      const price = Number(item?.price) || 0;
+      const total = qty * price;
+      return `
+        <tr>
+          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#1f2937;">${name}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#1f2937;text-align:center;">${qty}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#1f2937;text-align:right;">${formatPrice(
+            price
+          )} DT</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#1f2937;text-align:right;">${formatPrice(
+            total
+          )} DT</td>
+        </tr>`;
+    })
+    .join('');
+
+  return `
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <thead>
+        <tr style="background:#f3f4f6;color:#374151;">
+          <th style="padding:8px 12px;text-align:left;">Article</th>
+          <th style="padding:8px 12px;text-align:center;">Qté</th>
+          <th style="padding:8px 12px;text-align:right;">Prix unit.</th>
+          <th style="padding:8px 12px;text-align:right;">Total</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function getReference(order: OrderData): string {
+  if (order.orderNumber) return order.orderNumber;
+  const orderRef = order.documentId || String(order.id || order.customerName || '');
+  return (orderRef || '').slice(-6).toUpperCase();
+}
+
+function buildHtml(order: OrderData): string {
+  const reference = getReference(order);
+
+  return `
+    <div style="font-family:Arial,Helvetica,sans-serif;background:#f9fafb;padding:24px;">
+      <div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+        <div style="background:#7c3aed;padding:24px 32px;color:#ffffff;">
+          <h1 style="margin:0;font-size:22px;">Nouvelle commande AYSHO</h1>
+          <p style="margin:6px 0 0;font-size:14px;opacity:.9;">Référence : AYSHO-${reference}</p>
+        </div>
+
+        <div style="padding:24px 32px;">
+          <h3 style="margin:0 0 12px;font-size:16px;color:#111827;">Détails client</h3>
+          <table style="width:100%;font-size:14px;color:#374151;">
+            <tr><td style="padding:4px 0;color:#6b7280;width:130px;">Nom</td><td>${escapeHtml(
+              order.customerName || ''
+            )}</td></tr>
+            <tr><td style="padding:4px 0;color:#6b7280;">Téléphone</td><td>${escapeHtml(
+              order.customerPhone || ''
+            )}</td></tr>
+            <tr><td style="padding:4px 0;color:#6b7280;">Email</td><td>${escapeHtml(
+              order.customerEmail || '—'
+            )}</td></tr>
+            <tr><td style="padding:4px 0;color:#6b7280;">Adresse</td><td>${escapeHtml(
+              order.customerAddress || ''
+            )}</td></tr>
+            <tr><td style="padding:4px 0;color:#6b7280;">État</td><td>${escapeHtml(
+              order.state || 'pending'
+            )}</td></tr>
+          </table>
+
+          <h3 style="margin:24px 0 12px;font-size:16px;color:#111827;">Articles commandés</h3>
+          ${buildOrderList(order.items)}
+
+          <div style="margin-top:16px;padding:16px;background:#f3f4f6;border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:15px;font-weight:600;color:#111827;">Total commande</span>
+            <span style="font-size:20px;font-weight:700;color:#7c3aed;">${formatPrice(
+              order.totalPrice
+            )} DT</span>
+          </div>
+
+          <p style="margin-top:24px;font-size:13px;color:#6b7280;text-align:center;">
+            Paiement à la livraison (espèces) · Livraison gratuite
+          </p>
+        </div>
+      </div>
+    </div>`;
+}
+
+function buildText(order: OrderData): string {
+  const reference = getReference(order);
+  const items = Array.isArray(order.items) ? order.items : [];
+
+  const lines = items.map((item) => {
+    const qty = Number(item?.quantity) || 1;
+    const price = Number(item?.price) || 0;
+    return `- ${item?.name || 'Article'} x ${qty} = ${formatPrice(qty * price)} DT`;
+  });
+
+  return [
+    'NOUVELLE COMMANDE AYSHO',
+    `Référence : AYSHO-${reference}`,
+    '',
+    'DÉTAILS CLIENT',
+    `Nom : ${order.customerName || ''}`,
+    `Téléphone : ${order.customerPhone || ''}`,
+    `Email : ${order.customerEmail || '—'}`,
+    `Adresse : ${order.customerAddress || ''}`,
+    `État : ${order.state || 'pending'}`,
+    '',
+    'ARTICLES',
+    ...(lines.length ? lines : ['Aucun article']),
+    '',
+    `Total : ${formatPrice(order.totalPrice)} DT`,
+    'Paiement à la livraison (espèces)',
+  ].join('\n');
+}
+
+interface Logger {
+  warn?: (message: string, ...args: unknown[]) => void;
+  error?: (message: string, ...args: unknown[]) => void;
+  info?: (message: string, ...args: unknown[]) => void;
+}
+
+/**
+ * Envoie une notification de commande via Resend.
+ * Ne lève jamais d'exception (fire-and-forget avec log).
+ */
+export async function sendOrderNotification(order: OrderData, logger?: Logger): Promise<void> {
+  const { apiKey, from, to } = readConfig();
+  const log = logger ?? console;
+
+  if (!apiKey) {
+    log.warn?.('[email] RESEND_API_KEY non configuré, envoi ignoré.');
+    return;
+  }
+  if (!to) {
+    log.warn?.('[email] RESEND_TO non configuré, envoi ignoré.');
+    return;
+  }
+
+  const reference = getReference(order);
+
+  try {
+    const resend = new Resend(apiKey);
+    const { error } = await resend.emails.send({
+      from,
+      to,
+      subject: `Nouvelle commande AYSHO-${reference}`,
+      html: buildHtml(order),
+      text: buildText(order),
+    });
+
+    if (error) {
+      log.error?.('[email] Échec envoi Resend :', error);
+    } else {
+      log.info?.('[email] Notification de commande envoyée à', to);
+    }
+  } catch (err) {
+    log.error?.('[email] Erreur envoi :', err);
+  }
+}
